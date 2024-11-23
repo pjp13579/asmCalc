@@ -1,4 +1,4 @@
-;sum of two stack version
+;calculator
 .MODEL SMALL  
 
 .stack
