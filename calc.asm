@@ -35,18 +35,25 @@ MAIN PROC
         
         mainCycle:
         	lea dx, inputOneMessage	; load address of number1 prompt message for input prodecure
-        	lea si, numberOne	; load address of number1 array for input prodecure        
+        	lea si, numberOne	; load address of number1 array for input prodecure
+        	call zeroNumber		; zero every digit of the array        
         	call readNumberInput	; read input of first number           
         
         	lea dx, inputTwoMessage	; load address of number2 prompt message for input prodecure
         	lea si, numberTwo       ; load address of number2 array for input prodecure     
+        	call zeroNumber		; zero every digit of the array
         	call readNumberInput	; read input of second number      
         	
         	call preformOperation
         	
         	call outputResult    
-         	
+         	                                  
          	call putANewLineInTheConsole
+         	         	                            
+		resetComponents:         	          
+         	lea si, result
+         	call zeroNumber
+         	mov operation, 0
          	
         	jmp mainCycle
         
@@ -83,6 +90,7 @@ integerDivision proc
 			mov al, [si]
 			shl al, 1
 			mov [si], al
+			
 			                    
                     
         ret
@@ -417,7 +425,26 @@ readNumberInput PROC	; note: input does not work via numpad. normal 0 -> 9 in ke
 	mov di, 0
 			          
 	ret          
-readNumberInput ENDP                                                     
+readNumberInput ENDP
+
+zeroNumber proc
+	       
+	; input: number to reset is defined by the addresss in si
+	; after function: si register is reset to start of array
+	       
+	mov cx, length
+	
+	; si points to the biggining of the array
+	
+	zeroDigit:
+		mov [si], 0
+		inc si
+		loop zeroDigit
+	
+	sub si, length	
+			
+	ret
+zeroNumber endp                                                     
                   
 putANewLineInTheConsole proc
 	
