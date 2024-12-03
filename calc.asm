@@ -349,7 +349,7 @@ readNumberInput PROC	; note: input does not work via numpad. normal 0 -> 9 in ke
 	  		call deleteCurrentCharacter
 			pop ax	; remove the digit from the stack	  		      	  	
 	  		; loop changed to  jmp.
-	  		;inc cx	; allow for another loop iteration 
+	  		inc cx	; allow for another loop iteration 
 	  		 	
 	   		jmp readingDigit	   		   
 	   	
