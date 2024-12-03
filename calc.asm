@@ -1,10 +1,7 @@
 ;calculator
 .MODEL SMALL  
 
-.stack
-	stack_segment segment stack
-    		db 256 dup(0)	; 256 bytes reserved for stack
-	stack_segment ends
+.stack 256
 
 .DATA
 	inputOneMessage db 'Insert first number: $'
