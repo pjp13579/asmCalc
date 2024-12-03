@@ -54,6 +54,7 @@ MAIN PROC
          	lea si, result
          	call zeroNumber
          	mov operation, 0
+         	mov resultSign, 0
          	
         	jmp mainCycle
         
@@ -265,30 +266,38 @@ outputResult PROC
 	
 	lea dx, resultPreText	; move output prefix text 
 	mov ah, 09h	; load function to print out sting in DX
-	int 21h         ; execute 09h                                                           
-	
-	mov cx, length	; do loop for the size of the array
-	lea si, result  ; si points into the result array
-	         
-	outputSign:
-	cmp resultSign, 1
+	int 21h         ; execute 09h                                                           	
+	                    	
+	mov cx, length	; do loop for every element of the array
+	lea si, result  ; point into the beggining result array	                    
+	                    
+	outputSignValidation:
+	cmp resultSign, 1	; (0 = positive number, 1 = negative number)
 	jne outputDigit
 	
-	call outputMinusChar
+	call outputMinusChar	
 	
-		         
 	outputDigit:
-		
-		mov dx,	[si]	; move element from result into dx
-		add dx, 48	; converts a numbrer into the corresponding ascii character (+48 || +'0' || +30h as you prefer)
-                
-                mov ah, 02h	; load function to print out digit in DX
-		int 21h         ; execute
-		
-		inc si
-		
-		loop outputDigit ; output next digit
-			          
+	    	mov dx, [si]	; Move digit from result into dx for processing
+	    	cmp dl, 0	; Compare the digit with zero
+	    	je checkZero	; If zero, check if it can be ignored as a leading zero
+	    	
+	    	mov bx, 1	; Found a non-zero digit, enable leading zero flag
+	    	jmp printDigit	; Jump to printing the digit
+	
+	checkZero:
+	    	cmp bx, 1	; Check if the leading zero flag is enabled
+	    	jne skipDigit	; If not enabled, skip this zero
+	
+	printDigit:
+	    	add dx, 48	; Convert number into ASCII character
+	    	mov ah, 02h	; Load function to print out digit in DX
+	    	int 21h		; Execute
+	
+	skipDigit:
+	    	inc si		; Move to the next digit
+	    	loop outputDigit; Repeat for the next digit
+        	          
 	ret          
 outputResult ENDP
 
