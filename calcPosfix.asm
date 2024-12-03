@@ -448,8 +448,7 @@ operatorPrecedende endp
 saveOperand proc
 	
 	pop dx	; call pushed the return memory address. It's ahead the number we're working with. In the end, we will push back to return to the caller proc
-	 
-                    
+	              
 	popDigitsIntoArray:
 	        ; mov si pointer into the last index of the array
 		; add si, numberMaxLength - 1	; add the numberMaxLength, will excede the array by one, since arrays are zero based
@@ -468,8 +467,7 @@ saveOperand proc
 		push dx
 		mov si, 0
 		mov di, 0
-		
-                
+		               
         ret        
 saveOperand endp
 

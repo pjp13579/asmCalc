@@ -8,15 +8,22 @@
 	inputTwoMessage db 'Insert second number: $'
 	resultPreText db 'result is: $'
 	newline db 13, 10, '$'	; Carriage Return and Line Feed make up a newline.
-        backspace_string db 8, ' ', 8, '$'	; backspace, override previous charecter, backspace (to visually delete the character), null terminator
+        backspace_string db 8, ' ', 8, '$'	; meant to be used for data validation, when user does not press backspace key
+        removeCurrentCharacter db ' ', 8, '$'   ; meant to be used when user inserts a backspace
+        addSpace db 32, '$'     
+        negativeResultString db 45, '$'
                                                    
 	length equ 3	; define constant with the length of the numbers		                                          
 	numberOne db length dup(0)	; input number 1 array
 	numberTwo db length dup(0)	; input number 2 array
 	remainder db length dup(0)	; input number 2 array
+	
+	operation db 0
+	
 	result db length dup(0)		; output result array
 	resultSign db 0		; represents the sign of the result of an operation with unsigned numbers
 	
+	dividend_pointer db 0
 	anotherCarryFlag db 0
 	
 	
@@ -26,28 +33,59 @@ MAIN PROC
  	
  	call config	; initial configurations 	
         
-        lea dx, inputOneMessage	; load address of number1 prompt message for input prodecure
-        lea si, numberOne	; load address of number1 array for input prodecure        
-        call readNumberInput	; read input of first number           
+        mainCycle:
+        	lea dx, inputOneMessage	; load address of number1 prompt message for input prodecure
+        	lea si, numberOne	; load address of number1 array for input prodecure        
+        	call readNumberInput	; read input of first number           
         
-        lea dx, inputTwoMessage	; load address of number2 prompt message for input prodecure
-        lea si, numberTwo       ; load address of number2 array for input prodecure     
-        call readNumberInput	; read input of second number      
-       
-        call integerDivision
-       
-        call outputResult
+        	lea dx, inputTwoMessage	; load address of number2 prompt message for input prodecure
+        	lea si, numberTwo       ; load address of number2 array for input prodecure     
+        	call readNumberInput	; read input of second number      
+        	
+        	call preformOperation
+        	
+        	call outputResult    
+         	
+         	call putANewLineInTheConsole
+         	
+        	jmp mainCycle
         
         call exitProgram	; exit program
         
-ENDP
+MAIN ENDP
+
+preformOperation proc
+                     
+	cmp operation, '+'
+	je addNumbers
+	
+	cmp operation, '-'                    
+	je subNumbers               
+	
+	cmp operation, '/'
+	je integerDivision
+	
+	cmp operation, 'v'
+	je sqrt
+                     
+preformOperation endp
+
+sqrt proc
+         
+	ret         
+sqrt endp
       
 integerDivision proc
 		
-		dividend_pointer db 0
-		                    
+		
+	updateRemainder:
+		leftShitRemainder:
+			mov al, [si]
+			shl al, 1
+			mov [si], al
+			                    
                     
-
+        ret
 integerDivision endp      
       
 subNumbers proc
@@ -223,7 +261,14 @@ outputResult PROC
 	
 	mov cx, length	; do loop for the size of the array
 	lea si, result  ; si points into the result array
+	         
+	outputSign:
+	cmp resultSign, 1
+	jne outputDigit
 	
+	call outputMinusChar
+	
+		         
 	outputDigit:
 		
 		mov dx,	[si]	; move element from result into dx
@@ -252,16 +297,25 @@ readNumberInput PROC	; note: input does not work via numpad. normal 0 -> 9 in ke
 	; DX already contains the promt address (or atleast it should be idk)
 	mov ah, 09h	; load function to print out sting in DX
 	int 21h         ; execute 09h                                                           
+	     
+	mov cx, length	; max digits in the number	         		
 	
-	mov cx, length	; max digits in the number
-		
 	readingDigit:
 		mov ah, 01h	; read keyboard character function, input in AL
-		
 		int 21h
+		
+		cmp al, 8	; compare to backspace key, if so remove last digit inputed 
+		je is_backspace
+		
 		cmp al, 13	; compare to enter key, if so number is complete and move on
 		je inputIsFinished 
-	
+	        
+	        cmp al, 43	; + addition operation
+	        je set_sum_operation
+	        
+	        cmp al, 45	; - subtraction operation
+	        je set_sub_operation
+	        
 	   	cmp al, 48	; validate if ascii code is lower than {ascci code 48, decimal 0}, if so, not a valid number, ask digit again
 	   	jl not_a_number
 	   	
@@ -270,12 +324,52 @@ readNumberInput PROC	; note: input does not work via numpad. normal 0 -> 9 in ke
 	   	
 	   	; if reached here, input is a valid number
 	   	jmp is_a_validNumber
+	   		   
+		is_backspace:	  		          
+	   		cmp cx, length	; validate edge case if no number has been inputed yet 
+	  		je invalidBackspace     			
+      			                  
+	  		call deleteCurrentCharacter
+			pop ax	; remove the digit from the stack	  		      	  	
+	  		; loop changed to  jmp.
+	  		;inc cx	; allow for another loop iteration 
+	  		 	
+	   		jmp readingDigit	   		   
+	   	
+	   	invalidBackspace:  
+	 	  	call correctInvalidBackspace
+	   		jmp readingDigit
+	   	
+	   	set_sum_operation:
+	   		cmp operation, 0
+	   		jne  inputIsFinished	; operation has already been set.
+	   		
+	   		mov operation, '+'
+	   		
+	   		jmp inputIsFinished
+	   		
+	   	set_sub_operation:
+	   		cmp operation, 0
+	   		jne  inputIsFinished	; operation has already been set.
+	   		
+	   		mov operation, '-'
+	   		
+	   		jmp inputIsFinished
 	   		   	
 	        not_a_number:
 			; you morom can't even put a valid input shame grow a tumor shame shame shame
-			call putABackspaceInTheConsoleAndThereforeDeleteThePreviousCharacter
+			call putABackspaceInTheConsoleAndDeleteThePreviousCharacter
 			jmp readingDigit	; since you put a wrong characer, you now get to do it again dumb f
-	                     
+	        
+	        numberIsOfmaxSize:
+	 		; since the number is max size no more digits can be added to it. Only a operator
+	 		call putABackspaceInTheConsoleAndDeleteThePreviousCharacter
+	 		jmp readingDigit
+	 		
+	 	deletePrev:
+	 		; since the number is max size no more digits can be added to it. Only a operator
+	 		call putABackspaceInTheConsoleAndDeleteThePreviousCharacter
+	 		jmp readingDigit             
 	                    
 	        is_a_validNumber:
 	        	; you're still a shameful moron
@@ -283,26 +377,32 @@ readNumberInput PROC	; note: input does not work via numpad. normal 0 -> 9 in ke
 	        	mov ah, 0	; ah is not used, zero out 
 	        	sub al, '0'     ; convert ascii code into decimal number
 	        	
+	        	cmp cx, 0	; limit characters to pre-defined limit
+	        	je deletePrev
+	        	
 	        	; digits will be pushed into the stack on their correct order of magnitude
 	        	; they will later on, the popped out and inserted right to left (least significative to most significative)
 	        	; doing this to avoid this routine rightShiftUntilTheUnitDigitOfTheInputIsInTheCorrespondingUnitPositionInTheNumberArray:
-	        	push ax		; push digit into stack
-	   		loop readingDigit	; ask for the next digit
+	        	push ax			; push digit into stack
+	        	dec cx
+	   		jmp readingDigit	; ask for the next digit
 	   			   	   
 		inputIsFinished:
 		cmp cx, length		; number cannot be empty
 		je readingDigit
+	        
+	        
 	                   
 	popIntoNumberArray:	                  
 	
 	; mov si pointer into the last index of the array
 	add si, length	; add the lenght, will excede the array by one, since arrays are zero based
-	sub si, 1       ; go back one
+	sub si, 1	; go back one
 	
 	; calculate the number of digits inserted
-	mov ax, length      	; start with max amount of digits
-	sub ax, cx          	; subtract number of digits left unsused (remaining value in cx is the number of iterations left when the loop to read digits was cut short)
-	mov cx, ax          	; override the value of cx
+	mov ax, length		; start with max amount of digits
+	sub ax, cx		; subtract number of digits left unsused (remaining value in cx is the number of iterations left when the loop to read digits was cut short)
+	mov cx, ax		; override the value of cx
 	
 	popIntoDigitIntoArray:	; pop the digits of the number into the array                     	
 		pop ax		; pop digit		
@@ -319,24 +419,51 @@ readNumberInput PROC	; note: input does not work via numpad. normal 0 -> 9 in ke
 	ret          
 readNumberInput ENDP                                                     
                   
-putanewlineintheconsole proc
+putANewLineInTheConsole proc
 	
-	mov dx, offset newline	; carriage return and line feed make up a newline.
+	lea dx, newline	; carriage return and line feed make up a newline.
 	mov ah, 09h
 	int 21h
 	
 	ret	
-putanewlineintheconsole endp
+putANewLineInTheConsole endp
 
-putABackspaceInTheConsoleAndThereforeDeleteThePreviousCharacter proc
-	
-	mov dx, offset backspace_string	; backspace_string db 8, ' ', 8, '$'
+putABackspaceInTheConsoleAndDeleteThePreviousCharacter proc
+	; meant to be used for data validation, when user does not press backspace key
+	lea dx, backspace_string	
 	mov ah, 09h
 	int 21h	
 	
 	ret	
-putABackspaceInTheConsoleAndThereforeDeleteThePreviousCharacter endp                               
-		
+putABackspaceInTheConsoleAndDeleteThePreviousCharacter endp
+
+deleteCurrentCharacter proc
+	; meant to be used when user inserts a backspace
+	lea dx, removeCurrentCharacter
+	mov ah, 09h
+	int 21h	
+	
+	ret	
+deleteCurrentCharacter endp 
+
+outputMinusChar proc
+	
+	lea dx, negativeResultString
+	mov ah, 09h
+	int 21h	
+	
+	ret	
+outputMinusChar endp  
+        
+correctInvalidBackspace proc
+	
+	lea dx, addSpace
+	mov ah, 09h
+	int 21h	
+	
+	ret	
+correctInvalidBackspace endp   
+
 config proc	
 	mov ax, @data	; load data segment
 	mov ds, ax      ; load data segment
@@ -361,5 +488,3 @@ exitProgram proc
 exitProgram endp	
 	
 END	
-	
-         
