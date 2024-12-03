@@ -13,6 +13,7 @@
 	length equ 3	; define constant with the length of the numbers		                                          
 	numberOne db length dup(0)	; input number 1 array
 	numberTwo db length dup(0)	; input number 2 array
+	remainder db length dup(0)	; input number 2 array
 	result db length dup(0)		; output result array
 	resultSign db 0		; represents the sign of the result of an operation with unsigned numbers
 	
@@ -33,13 +34,21 @@ MAIN PROC
         lea si, numberTwo       ; load address of number2 array for input prodecure     
         call readNumberInput	; read input of second number      
        
-        call subNumbers
+        call integerDivision
        
         call outputResult
         
         call exitProgram	; exit program
         
 ENDP
+      
+integerDivision proc
+		
+		dividend_pointer db 0
+		                    
+                    
+
+integerDivision endp      
       
 subNumbers proc
 	; todo write some bs about how the algorithm requires a positive result         
@@ -332,9 +341,9 @@ config proc
 	mov ax, @data	; load data segment
 	mov ds, ax      ; load data segment
 	
-	mov ax, stack_segment	; load stack segment
-	mov ss, ax              ; load stack segment
-	mov sp, 0xFFFE  ; Set stack pointer to the top of the stack
+	;mov ax, stack_segment	; load stack segment
+	;mov ss, ax             ; load stack segment
+	;mov sp, 0xFFFE  ; Set stack pointer to the top of the stack
 
 	
 	mov ax, 03h	; set video mode configuration 3
