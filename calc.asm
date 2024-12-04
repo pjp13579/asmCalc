@@ -7,24 +7,29 @@
 	inputOneMessage db 'Insert first number: $'
 	inputTwoMessage db 'Insert second number: $'
 	resultPreText db 'result is: $'
-	newline db 13, 10, '$'	; Carriage Return and Line Feed make up a newline.
-        backspace_string db 8, ' ', 8, '$'	; meant to be used for data validation, when user does not press backspace key
-        removeCurrentCharacter db ' ', 8, '$'   ; meant to be used when user inserts a backspace
-        addSpace db 32, '$'     
-        negativeResultString db 45, '$'
+	newline db 13, 10, '$'			; Carriage Return and Line Feed make up a newline.
+        backspace_string db 8, ' ', 8, '$'	; meant to be used for data validation, when user does not press the backspace key
+        removeCurrentCharacter db ' ', 8, '$'   ; meant to be used when user presses the backspace key
+        addSpace db 32, '$'			; prints a space ' '     
+        negativeResultString db 45, '$'         ; prints a minus '-'
                                                    
-	length equ 3	; define constant with the length of the numbers		                                          
+	length equ 3			; define constant with the length of the numbers
+	lengthTimesTwo equ length * 2	; for the multiplication result. The maximum size of the result will be the sum of the length of both operands (operands are of the same size, and therefore time 2)		                                          
 	numberOne db length dup(0)	; input number 1 array
 	numberTwo db length dup(0)	; input number 2 array
+	tmp db length dup(0)		; auxiliary number array
+	tmpTwo db lengthTimesTwo dup(0)	; auxiliary number array for multiplication
 	remainder db length dup(0)	; input number 2 array
 	
-	operation db 0
+	operation db 0			; specifies the operation between the numbers (+, - , /, v (v -> sqrt, only uses one number))
 	
-	result db length dup(0)		; output result array
-	resultSign db 0		; represents the sign of the result of an operation with unsigned numbers
+	result db length dup(0)			; output result array 
+	mulResult db lengthTimesTwo dup(0)	; output result array for multiplication
+	resultSign db 0				; represents the sign of the result of an operation with unsigned numbers
 	
-	dividend_pointer db 0
-	anotherCarryFlag db 0
+	anotherCounter db 0	; used for multiplication algorithm
+	dividendPointer db 0	; in the context of division, the dividend will be numberOne
+	anotherCarryFlag db 0	; only god and fuck knows what this is for... prolly subtraction
 	
 	
 .CODE
@@ -44,25 +49,28 @@ MAIN PROC
         	call zeroNumber		; zero every digit of the array
         	call readNumberInput	; read input of second number      
         	
-        	call preformOperation
+        	call preformOperation	; maps te value in operation to the corresponding procedure
         	
-        	call outputResult    
+        	call outputResult       ; prints the result
          	                                  
-         	call putANewLineInTheConsole
+         	call putANewLineInTheConsole	; does what the name says
          	         	                            
-		resetComponents:         	          
+		; reset variables, the code flow requires these variables to be 0 at the begining of the iteration
          	lea si, result
-         	call zeroNumber
-         	mov operation, 0
+         	call zeroNumber	
+         	mov operation, 0	
          	mov resultSign, 0
          	
-        	jmp mainCycle
+        	jmp mainCycle		; repeat
         
         call exitProgram	; exit program
         
 MAIN ENDP
 
 preformOperation proc
+
+	lea si, numberOne
+	lea di, numberTwo
                      
 	cmp operation, '+'
 	je addNumbers
@@ -70,12 +78,16 @@ preformOperation proc
 	cmp operation, '-'                    
 	je subNumbers               
 	
+	cmp operation, '*'
+	je mult
+	
 	cmp operation, '/'
 	je integerDivision
 	
 	cmp operation, 'v'
 	je sqrt
-                     
+        
+        ; the program works, there is not ret in here... why does it work??             
 preformOperation endp
 
 sqrt proc
@@ -87,28 +99,115 @@ integerDivision proc
 		
 		
 	updateRemainder:
-		leftShitRemainder:
-			mov al, [si]
-			shl al, 1
-			mov [si], al
+				
+		lea si, remainder	; start at the leftmost position of the array and override it with the next digit                                  
+		mov cx, length - 1	; preform one less shift, because that one last shift would pull data from outside the array memory space
+		
+		leftShitRemainder:		; increase every digit by a order of magnitude
+			mov al, [si + 1]	; get the digit at the right of the current position 
+			mov [si], al            ; override current digit with the one at it's right
+			inc si			; move si into the next lower significance digit
+			loop leftShitRemainder	; repeat for remaining digits
 			
-			                    
-                    
+		; add the unit digit
+		;mov al, [numberOne + dividendPointer] 
+		mov [si], al
+		
+		lea si, remainder	                    
+		lea di, numberTwo
+		
+		
+		call determineSubtractionSign ; determine if the remainder is above or equal to the divisor (0 greater or equal, 1 below)
+		
+		cmp bx, 0
+		je mult
+		; EIII WATCH OUT: what will happen if the divisor is greater than the dividen? I guess this code will go apeshit. Come back to this... eventually       
+		; maybe just validate if the division if above or equal to the divison, else quocient is 0?
+		
+		inc dividendPointer
+		jmp updateRemainder		           
+	     	
+	
+	determineDivisorCoeficient: ; find the greatest coeficient of divisor such that it's below or equal to the remainder
+	
+		mov cx, 0	; multiplication incremental coeficient (1, 2, 3, ..., 8, 9)
+		
+		
+		; in order to use multiplication, both operands need to be arrays of digits
+		; we're mapping our multiplication increment to an array and send it as that
+		lea di, tmp + length - 1	; load the address of the last (rightmost, least significant) element of tmp array	
+		mov [di], cl                    ; move the coeficient value into least significant position of tmp array
+		          
+  		lea si, numberTwo	; define the first operand for multiplication 
+  		lea di, tmp		; define the second operand for multiplication 
+        	
+        	call mult
+        	
+        	inc cl            
         ret
-integerDivision endp      
+integerDivision endp
+
+mult proc
+
+ 	mov cx, 0				; counter for number of di iterations
+ 	mov anotherCounter, 0                   ; counter for number of si iterations
+ 	
+	add si, length - 1			; put si in the memory address of the last element of the first operand array
+	add di, length - 1  			; put di in the memory address of the last element of the second operand array      
+	lea bx, mulResult + lengthTimesTwo - 1	; put bx in the memory address of the last element of the multiplication result array
+	                                                                                                                            
+	                                                                                                                            
+	
+	siIteration:   
+	
+	   diIteration:
+	   	mov al, [di]	; set first operand
+	   	mov dl, [si]	; set second operand
+	   	mul dl		; multiply operands
+	   	                           
+		; since multiplying only since digit numbers, only al contains the result
+	
+		; for the multiplication algorithm the units stay at the current position in the result and the dozens act as carry value to be added in the next significanse position	   	                         
+	   	mov dl, 10	; to separate de dozens from the units, divide the digit multiplication result by 10
+	   	div dl
+	   	
+	   	add [bx], al	; al -> remainder; remainders is the units value of the digits multiplication
+	   	add [bx - 1], ah; ah -> quotient; quotient is the dozens value of the digtis multplication	   		   	   		   		   	 	   	   	
+	   	
+	   	cmp [bx - 1]
+	   	
+	   	dec bx		; move to the next array element (of higher magnitude) for next operation
+	   	dec dx		; move to next digit of one of the operands
+	   	
+	   	cmp bx
+	   	jmp diIteration
+	
+	inc cx 		  			; increase counter, to  	  
+	dec si					; move to next significanse digit of si
+	add di, length				; move di pointer back to the least significance (right-most) element 
+	lea bx, mulResult + lengthTimesTwo - 1	; put bx in the memory address of the last element of the multiplication result array
+	sub bx, cx				;
+	
+	
+	;jmp
+	
+	 
+        
+	ret
+mult endp    
       
 subNumbers proc
-	; todo write some bs about how the algorithm requires a positive result         
-	; todo the minuend as to be greater or equal to the subtrahend explain that
-	; todo yeah describe the subtraction algorithm
+	; TODO write some bs about how the algorithm requires a positive result         
+	; TODO the minuend as to be greater or equal to the subtrahend explain that
+	; TODO yeah also describe the subtraction algorithm
 	
 	; How to deal with negative results.
 	; Subtraction is not a commutative operation, but there is a direct relation in the result if we swap the operands.
 	; If we swap the operands, the result is going to have the same absolute value, but the symmetric sign.
 	; The sign of the the result can be predicted by the order of the operands 
 	; if the minuend is below the subtrahend, we're facing a negative result
-	; Knowing both this things, we will predict when the subtraction will result in a signed negative value and react accordingly
-	; If the result is negative, we will swap the operands, resulting in a positive unsigned and setting a flag to represent the original result is negative signed
+	; Knowing both this things, we will predict when the subtraction would result in a signed negative value and react accordingly
+	; If the result is negative, we will swap the operands resulting in a signed positive and set a flag to represent the result is unsigned negative
 	
 	
 	call determineSubtractionSign	; signed subtraction is not suported. We will predict the sign of the result and if it's negative swap the operands
@@ -186,8 +285,8 @@ addNumbers proc
 	clc		; Clear Carry Flag (cf = 0)
 	mov ax, 0	; clear ax
 	              
-	lea si, numberOne + length - 1	; put si in the memory address of the last element of the numerOne array
-	lea di, numberTwo + length - 1  ; put di in the memory address of the last element of the numerTwo array      
+	add si, length - 1	; put si in the memory address of the last element of the first array
+	add di, length - 1  	; put di in the memory address of the last element of the second array      
 	lea bx, result + length - 1	; put bx in the memory address of the last element of the result array	
 	
 	mov cx, length	; loop should repeat for the size of the array 
@@ -278,6 +377,7 @@ outputResult PROC
 	call outputMinusChar	
 	
 	outputDigit:
+		; the next line is moving a value into dh. why the fuck why?
 	    	mov dx, [si]	; Move digit from result into dx for processing
 	    	cmp dl, 0	; Compare the digit with zero
 	    	je checkZero	; If zero, check if it can be ignored as a leading zero
