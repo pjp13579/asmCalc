@@ -13,19 +13,18 @@
         addSpace db 32, '$'			; prints a space ' '     
         negativeResultString db 45, '$'         ; prints a minus '-'
                                                    
-	length equ 10			; define constant with the length of the numbers
+	length equ 4			; define constant with the length of the numbers
 	lengthTimesTwo equ length * 2	; for the multiplication result. The maximum size of the result will be the sum of the length of both operands (operands are of the same size, and therefore time 2)		                                          
 	numberOne db length dup(0)	; input number 1 array
 	numberTwo db length dup(0)	; input number 2 array
-	
-	tmp db lengthTimesTwo dup(0)	; auxiliary number array for multiplication
+		 
 	remainder db length dup(0)	; input number 2 array
 	
 	operation db 0			; specifies the operation between the numbers (+, - , /, v (v -> sqrt, only uses one number))
 	
-	result db lengthTimesTwo dup(0)			; output result array 
-	mulResult db lengthTimesTwo dup(0)	; output result array for multiplication
-	resultSign db 0				; represents the sign of the result of an operation with unsigned numbers
+	result db length dup(0)		; output result array 
+	mulResult db length dup(0)	; output result array for multiplication
+	resultSign db 0			; represents the sign of the result of an operation with unsigned numbers
 	
 	anotherCounter db 0	; used for multiplication algorithm
 	dividendPointer db 0	; in the context of division, the dividend will be numberOne
@@ -40,6 +39,15 @@
 	mem7 dw 0
 	mem8 dw 0
 	mem9 dw 0
+	tmp1 db length dup(0)		; auxiliary number array 
+	tmp2 db length dup(0)		; auxiliary number array 
+	tmp3 db length dup(0)		; auxiliary number array 
+	tmp4 db length dup(0)		; auxiliary number array 
+	tmp5 db length dup(0)		; auxiliary number array 
+	tmp6 db length dup(0)		; auxiliary number array 
+	tmp7 db length dup(0)		; auxiliary number array 
+	tmp8 db length dup(0)		; auxiliary number array 
+	tmp9 db length dup(0)		; auxiliary number array
 	
 	
 .CODE
@@ -146,7 +154,7 @@ integerDivision proc
 		
 		; in order to use multiplication, both operands need to be arrays of digits
 		; we're mapping our multiplication increment to an array and send it as that
-		lea di, tmp + length - 1	; load the address of the last (rightmost, least significant) element of tmp array	
+		lea di, tmp1 + length - 1	; load the address of the last (rightmost, least significant) element of tmp array	
 		mov [di], cl                    ; move the coeficient value into least significant position of tmp array
 				         
   		lea si, numberOne	; define the first operand for multiplication 
@@ -200,26 +208,29 @@ mult proc
 		call arrayIsZero		; validate if we have any addition to preform
 	
 		cmp dx, 0	       	
-		jz mulComplete			; if zero, no addition remains. Exit the addition loop                                                                                                                  
+		je mulComplete			; if zero, no addition remains. Exit the addition loop                                                                                                                  
 	 
 	 	; Access the result from the previous iteration. If it's the first iteration, tmp has a zero number
-		lea si, tmp
+		lea si, tmp1
 		lea di, result
+		mov cx, length
 		call copyArray
-	 
-		call addNumbersMul		; execute addition
+	               
+		lea si, numberOne
+		lea di, result
+			               
+		call addNumbers		; execute addition
 		 
 		; save result for next iteration. Subtraction is going to wirte over the result variable
 		lea si, result
-		lea di, tmp
+		lea di, tmp1           
+		mov cx, length
 		call copyArray
 		
 		
 		lea si, numberTwo		; load into si the memory address of numberTwo
-		
-		mov [tmp + length - 1], 1	; setup array representing number 1. 
-		lea di, tmp                     ; load array memory address for subtraction
-		
+		mov [tmp2 + length - 1], 1	; setup array representing number 1. 
+		lea di, tmp2                    ; load array memory address for subtraction		
 		lea bx, result    		; load result
 		
 		call subNumbersMul              ; execute subtraction
@@ -232,6 +243,7 @@ mult proc
 		lea di, numberTwo
 		mov cx, length		
 		
+		mov cx, length
 		call copyArray
 		
 		jmp additionCycle				
@@ -239,48 +251,14 @@ mult proc
 	
 	 mulComplete:
 	 
+	 lea si, tmp1
+	 lea di, result
+	 mov cx, length
+	 call copyArray
+	 
         
 	ret
 mult endp
-
-addNumbersMul proc
-	
-	clc		; Clear Carry Flag (cf = 0)
-	mov ax, 0	; clear ax
-	              
-	add si, length - 1	; put si in the memory address of the last element of the first array
-	add di, length - 1  	; put di in the memory address of the last element of the second array      
-	lea bx, result + length - 1	; put bx in the memory address of the last element of the result array	
-	
-	mov cx, length	; loop should repeat for the size of the array 
-	
-	addElementsMul:
-		mov al, [si]	; add a digit of first number
-		adc al, [di]    ; add a digit of first number  
-	         
-	        cmp al, 10      ; check if the result is greater than or equal to 10
-		jb no_carry     ; if not, skip carry adjustment
-		
-		carryMul:	
-		sub al, 10      ; adjust the result to fit in a single decimal digit
-		stc             ; SeT Carry Flag (cf = 1)
-	        mov [bx], al    ; move the sum to the corresponding element of the result array
-	        jmp continueMul
-	        
-	        no_carryMul:
-	        clc             ; Clear Carry Flag (cf = 0)
-	        mov [bx], al    ; move the sum to the corresponding element of the result array
-	                    
-	        continueMul:
-	        dec si	; move si pointer to the left element of the array (one order greater) 
-	        dec di  ; move di pointer to the left element of the array (one order greater)
-	        dec bx  ; move bx pointer to the left element of the array (one order greater)
-	        mov ax, 0	; clear ax for following operations
-	        
-		loop addElementsMul 
-	              
-	ret	              
-addNumbersMul endp
 
 arrayIsZero proc
 	; compares each digit to zero
@@ -304,11 +282,11 @@ arrayIsZero proc
     	        inc di		; move to next digit
     		
     		loop validate	
+    	
+    	ret
     		
     	notZero:
-    	mov dx, 1
-    	
-    
+    	mov dx, 1    	    
 	ret
 arrayIsZero endp    
       
@@ -319,39 +297,38 @@ subNumbersMul proc
 	              
 	add si, length - 1		; put si in the memory address of the last element of the numerOne array
 	add di, length - 1		; put di in the memory address of the last element of the numerTwo array      
-	add bl, result + length - 1	; put bx in the memory address of the last element of the result array	
-	
-	mov cx, length	; loop should repeat for the size of the array 
-	
-	subElementsMul:		
+	add bl, length - 1	; put bx in the memory address of the last element of the result array	
+
+	mov cx, length	
 		
+	subElementsMul:	
 		mov al, [si]
 		cmp al, [di]
 		jae subDontSetCarryMul
-		
+			
 		add al, 10	; minuend below subtrahend, so add the to the minuend ; you shit this add reset the carry flag. bugs out the sbb operations below		
-	
+		
 		subSetCarryMul:	
 		sub al, [di]			; subtract values and carry
 		sub al, anotherCarryFlag	; subtract the carry from the previous subtraction  
 		mov anotherCarryFlag, 1		; set carry flag for subtraction
-	        mov [bx], al			; move the subtraction result to the corresponding element of the result array
-	        jmp subContinueMul
+		mov [bx], al			; move the subtraction result to the corresponding element of the result array
+		jmp subContinueMul
+		        
+		subDontSetCarryMul:
+		sub al, [di]			; move the subtraction result to the corresponding element of the result array
+		sub al, anotherCarryFlag        ; subtract the carry from the previous subtraction
+		mov anotherCarryFlag, 0		; clear carry flag for subtraction
+		mov [bx], al			; move the subtraction result to the corresponding element of the result array
+		        
+		                    
+		subContinueMul:
+		dec si		; move si pointer to the left element of the array (one order greater) 
+		dec di  	; move di pointer to the left element of the array (one order greater)
+		dec bx  	; move bx pointer to the left element of the array (one order greater)
+		mov al, 0	; clear ax for following operations
 	        
-	        subDontSetCarryMul:
-	        sub al, [di]			; move the subtraction result to the corresponding element of the result array
-	        sub al, anotherCarryFlag        ; subtract the carry from the previous subtraction
-	        mov anotherCarryFlag, 0		; clear carry flag for subtraction
-	        mov [bx], al			; move the subtraction result to the corresponding element of the result array
-	        
-	                    
-	        subContinueMul:
-	        dec si		; move si pointer to the left element of the array (one order greater) 
-	        dec di  	; move di pointer to the left element of the array (one order greater)
-	        dec bx  	; move bx pointer to the left element of the array (one order greater)
-	        mov al, 0	; clear ax for following operations
-	        
-		loop subElementsMul
+        loop subElementsMul
 			       
 	              
 	ret	              
@@ -478,7 +455,7 @@ copyArray proc
 	; si : array to copy values from
 	; di : array to copy values to
 	
-	mov cx, length
+	; cx : length of the arrays
 	
 	doCopy:
 		mov al, [si]
@@ -488,7 +465,7 @@ copyArray proc
 		inc di  
 		  
 		loop doCopy		            
-              
+	ret      
 copyArray endp
 
 swapDigitsBetweenNumbers proc
