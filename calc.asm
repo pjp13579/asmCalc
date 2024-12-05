@@ -13,23 +13,33 @@
         addSpace db 32, '$'			; prints a space ' '     
         negativeResultString db 45, '$'         ; prints a minus '-'
                                                    
-	length equ 3			; define constant with the length of the numbers
+	length equ 10			; define constant with the length of the numbers
 	lengthTimesTwo equ length * 2	; for the multiplication result. The maximum size of the result will be the sum of the length of both operands (operands are of the same size, and therefore time 2)		                                          
 	numberOne db length dup(0)	; input number 1 array
 	numberTwo db length dup(0)	; input number 2 array
-	tmp db length dup(0)		; auxiliary number array
-	tmpTwo db lengthTimesTwo dup(0)	; auxiliary number array for multiplication
+	
+	tmp db lengthTimesTwo dup(0)	; auxiliary number array for multiplication
 	remainder db length dup(0)	; input number 2 array
 	
 	operation db 0			; specifies the operation between the numbers (+, - , /, v (v -> sqrt, only uses one number))
 	
-	result db length dup(0)			; output result array 
+	result db lengthTimesTwo dup(0)			; output result array 
 	mulResult db lengthTimesTwo dup(0)	; output result array for multiplication
 	resultSign db 0				; represents the sign of the result of an operation with unsigned numbers
 	
 	anotherCounter db 0	; used for multiplication algorithm
 	dividendPointer db 0	; in the context of division, the dividend will be numberOne
 	anotherCarryFlag db 0	; only god and fuck knows what this is for... prolly subtraction
+	
+	mem1 dw 0
+	mem2 dw 0
+	mem3 dw 0
+	mem4 dw 0
+	mem5 dw 0
+	mem6 dw 0
+	mem7 dw 0
+	mem8 dw 0
+	mem9 dw 0
 	
 	
 .CODE
@@ -79,7 +89,7 @@ preformOperation proc
 	je subNumbers               
 	
 	cmp operation, '*'
-	je mult
+	je mulSetup
 	
 	cmp operation, '/'
 	je integerDivision
@@ -87,7 +97,8 @@ preformOperation proc
 	cmp operation, 'v'
 	je sqrt
         
-        ; the program works, there is not ret in here... why does it work??             
+        ; the program works, there is not ret in here... on who's witchcraft does it work??             
+        ; maybe the ret on each of the operations returns to the main cycle. I'm complety oblivious
 preformOperation endp
 
 sqrt proc
@@ -110,7 +121,7 @@ integerDivision proc
 			loop leftShitRemainder	; repeat for remaining digits
 			
 		; add the unit digit
-		;mov al, [numberOne + dividendPointer] 
+		; mov al, [numberOne + dividendPointer] 
 		mov [si], al
 		
 		lea si, remainder	                    
@@ -128,7 +139,7 @@ integerDivision proc
 		jmp updateRemainder		           
 	     	
 	
-	determineDivisorCoeficient: ; find the greatest coeficient of divisor such that it's below or equal to the remainder
+	determineDivisorCoeficient:	; find the greatest coeficient of divisor such that it's below or equal to the remainder
 	
 		mov cx, 0	; multiplication incremental coeficient (1, 2, 3, ..., 8, 9)
 		
@@ -137,65 +148,215 @@ integerDivision proc
 		; we're mapping our multiplication increment to an array and send it as that
 		lea di, tmp + length - 1	; load the address of the last (rightmost, least significant) element of tmp array	
 		mov [di], cl                    ; move the coeficient value into least significant position of tmp array
-		          
-  		lea si, numberTwo	; define the first operand for multiplication 
-  		lea di, tmp		; define the second operand for multiplication 
-        	
+				         
+  		lea si, numberOne	; define the first operand for multiplication 
+  		lea di, result		; define the result for multiplication 
+ 		lea cx, numberTwo	; define second operand of multipication
+ 		 		      	
         	call mult
         	
         	inc cl            
         ret
 integerDivision endp
 
-mult proc
+mulSetup proc
 
- 	mov cx, 0				; counter for number of di iterations
- 	mov anotherCounter, 0                   ; counter for number of si iterations
- 	
-	add si, length - 1			; put si in the memory address of the last element of the first operand array
-	add di, length - 1  			; put di in the memory address of the last element of the second operand array      
-	lea bx, mulResult + lengthTimesTwo - 1	; put bx in the memory address of the last element of the multiplication result array
-	                                                                                                                            
-	                                                                                                                            
+	lea si, numberOne
+	mov mem1, si
 	
-	siIteration:   
+	lea bx, result
+	mov mem2, bx	   
 	
-	   diIteration:
-	   	mov al, [di]	; set first operand
-	   	mov dl, [si]	; set second operand
-	   	mul dl		; multiply operands
-	   	                           
-		; since multiplying only since digit numbers, only al contains the result
+	lea di, numberTwo
+	mov mem3, di
 	
-		; for the multiplication algorithm the units stay at the current position in the result and the dozens act as carry value to be added in the next significanse position	   	                         
-	   	mov dl, 10	; to separate de dozens from the units, divide the digit multiplication result by 10
-	   	div dl
-	   	
-	   	add [bx], al	; al -> remainder; remainders is the units value of the digits multiplication
-	   	add [bx - 1], ah; ah -> quotient; quotient is the dozens value of the digtis multplication	   		   	   		   		   	 	   	   	
-	   	
-	   	cmp [bx - 1]
-	   	
-	   	dec bx		; move to the next array element (of higher magnitude) for next operation
-	   	dec dx		; move to next digit of one of the operands
-	   	
-	   	cmp bx
-	   	jmp diIteration
-	
-	inc cx 		  			; increase counter, to  	  
-	dec si					; move to next significanse digit of si
-	add di, length				; move di pointer back to the least significance (right-most) element 
-	lea bx, mulResult + lengthTimesTwo - 1	; put bx in the memory address of the last element of the multiplication result array
-	sub bx, cx				;
+	call mult
 	
 	
-	;jmp
+	   
+	ret
+mulSetup endp
+
+mult proc
 	
+	; si : first operand
+	; di : result
+	; bx : second operand
+	
+	
+	; Multiplication is implemented by adding the same number a bunch of times
+	; 2 * 3, is done by adding the number 2 to 0, 3 times. ( 0 + 2 + 2 + 2 ).
+	; The zero is the begining state of the result, when the additions are complete,
+	; the result variable already contains the value.
+	; The number of time the addition happens is the number of the second operand
+	; on each iteration, we subtract that value by 1.
+	; We preform this while the second operand is different from zero                                             	 	                                                              	                                                                                                                          
+                                                               
+	additionCycle:                                                               
+		lea si, numberOne
+		lea di, numberTwo
+		lea bx, result
+		
+		call arrayIsZero		; validate if we have any addition to preform
+	
+		cmp dx, 0	       	
+		jz mulComplete			; if zero, no addition remains. Exit the addition loop                                                                                                                  
+	 
+	 	; Access the result from the previous iteration. If it's the first iteration, tmp has a zero number
+		lea si, tmp
+		lea di, result
+		call copyArray
+	 
+		call addNumbersMul		; execute addition
+		 
+		; save result for next iteration. Subtraction is going to wirte over the result variable
+		lea si, result
+		lea di, tmp
+		call copyArray
+		
+		
+		lea si, numberTwo		; load into si the memory address of numberTwo
+		
+		mov [tmp + length - 1], 1	; setup array representing number 1. 
+		lea di, tmp                     ; load array memory address for subtraction
+		
+		lea bx, result    		; load result
+		
+		call subNumbersMul              ; execute subtraction
+		
+		; subtraction saved the result in the result variable
+		; for the algorithm, the numberTwo itself needs to be 
+		; the one decremented, so we're going to copy the value
+		; from result to numberTwo
+		lea si, result			
+		lea di, numberTwo
+		mov cx, length		
+		
+		call copyArray
+		
+		jmp additionCycle				
+	
+	
+	 mulComplete:
 	 
         
 	ret
-mult endp    
+mult endp
+
+addNumbersMul proc
+	
+	clc		; Clear Carry Flag (cf = 0)
+	mov ax, 0	; clear ax
+	              
+	add si, length - 1	; put si in the memory address of the last element of the first array
+	add di, length - 1  	; put di in the memory address of the last element of the second array      
+	lea bx, result + length - 1	; put bx in the memory address of the last element of the result array	
+	
+	mov cx, length	; loop should repeat for the size of the array 
+	
+	addElementsMul:
+		mov al, [si]	; add a digit of first number
+		adc al, [di]    ; add a digit of first number  
+	         
+	        cmp al, 10      ; check if the result is greater than or equal to 10
+		jb no_carry     ; if not, skip carry adjustment
+		
+		carryMul:	
+		sub al, 10      ; adjust the result to fit in a single decimal digit
+		stc             ; SeT Carry Flag (cf = 1)
+	        mov [bx], al    ; move the sum to the corresponding element of the result array
+	        jmp continueMul
+	        
+	        no_carryMul:
+	        clc             ; Clear Carry Flag (cf = 0)
+	        mov [bx], al    ; move the sum to the corresponding element of the result array
+	                    
+	        continueMul:
+	        dec si	; move si pointer to the left element of the array (one order greater) 
+	        dec di  ; move di pointer to the left element of the array (one order greater)
+	        dec bx  ; move bx pointer to the left element of the array (one order greater)
+	        mov ax, 0	; clear ax for following operations
+	        
+		loop addElementsMul 
+	              
+	ret	              
+addNumbersMul endp
+
+arrayIsZero proc
+	; compares each digit to zero
+	; if every single one of them is zero, at the end
+	; dx will contain a 0, otherwise, dx will contain a 1
+	
+    	; input data:
+    	; cx : length of the array
+    	; di : points to the start of the number array
+    	        
+	; output data:   	        
+    	; dx : output ( 0 : array represents a zero number  |  1 : array represents a non-zero number )
+    	
+    	mov dx, 0
+    	mov cx, length
+    	
+    	validate:
+    		cmp [di], 0	; compare digit to zero
+    		jne notZero     ; if the digit in not a zero, exit the loop and mark the flag as 1 ( 1: array is a non-zero number)
+    	        
+    	        inc di		; move to next digit
+    		
+    		loop validate	
+    		
+    	notZero:
+    	mov dx, 1
+    	
+    
+	ret
+arrayIsZero endp    
       
+subNumbersMul proc
+						
+	clc		; Clear Carry Flag (cf = 0)
+	mov ax, 0	; clear ax
+	              
+	add si, length - 1		; put si in the memory address of the last element of the numerOne array
+	add di, length - 1		; put di in the memory address of the last element of the numerTwo array      
+	add bl, result + length - 1	; put bx in the memory address of the last element of the result array	
+	
+	mov cx, length	; loop should repeat for the size of the array 
+	
+	subElementsMul:		
+		
+		mov al, [si]
+		cmp al, [di]
+		jae subDontSetCarryMul
+		
+		add al, 10	; minuend below subtrahend, so add the to the minuend ; you shit this add reset the carry flag. bugs out the sbb operations below		
+	
+		subSetCarryMul:	
+		sub al, [di]			; subtract values and carry
+		sub al, anotherCarryFlag	; subtract the carry from the previous subtraction  
+		mov anotherCarryFlag, 1		; set carry flag for subtraction
+	        mov [bx], al			; move the subtraction result to the corresponding element of the result array
+	        jmp subContinueMul
+	        
+	        subDontSetCarryMul:
+	        sub al, [di]			; move the subtraction result to the corresponding element of the result array
+	        sub al, anotherCarryFlag        ; subtract the carry from the previous subtraction
+	        mov anotherCarryFlag, 0		; clear carry flag for subtraction
+	        mov [bx], al			; move the subtraction result to the corresponding element of the result array
+	        
+	                    
+	        subContinueMul:
+	        dec si		; move si pointer to the left element of the array (one order greater) 
+	        dec di  	; move di pointer to the left element of the array (one order greater)
+	        dec bx  	; move bx pointer to the left element of the array (one order greater)
+	        mov al, 0	; clear ax for following operations
+	        
+		loop subElementsMul
+			       
+	              
+	ret	              
+subNumbersMul endp
+
 subNumbers proc
 	; TODO write some bs about how the algorithm requires a positive result         
 	; TODO the minuend as to be greater or equal to the subtrahend explain that
@@ -222,14 +383,7 @@ subNumbers proc
 	lea si, numberOne
 	lea di, numberTwo
 	
-	swapDigitsBetweenNumbers:
-		mov al, [si]
-		mov bl, [di]
-		mov [si], bl
-		mov [di], al
-		inc si
-		inc di
-		loop swapDigitsBetweenNumbers			
+	call swapDigitsBetweenNumbers			
 		
 	skipOperandSwap:
 	clc		; Clear Carry Flag (cf = 0)
@@ -309,15 +463,50 @@ addNumbers proc
 	        mov [bx], al    ; move the sum to the corresponding element of the result array
 	                    
 	        continue:
-	        dec si	; move si pointer to the left element of the array (one order greater) 
-	        dec di  ; move di pointer to the left element of the array (one order greater)
-	        dec bx  ; move bx pointer to the left element of the array (one order greater)
+	        dec si		; move si pointer to the left element of the array (one order greater) 
+	        dec di 		; move di pointer to the left element of the array (one order greater)
+	        dec bx  	; move bx pointer to the left element of the array (one order greater)
 	        mov ax, 0	; clear ax for following operations
 	        
 		loop addElements 
 	              
 	ret	              
 addNumbers endp
+
+copyArray proc
+              
+	; si : array to copy values from
+	; di : array to copy values to
+	
+	mov cx, length
+	
+	doCopy:
+		mov al, [si]
+		mov [di], al
+		
+		inc si
+		inc di  
+		  
+		loop doCopy		            
+              
+copyArray endp
+
+swapDigitsBetweenNumbers proc
+
+	; swap array specified by si and di register
+	; cx must contain the length of the arrays
+
+	doSwap:
+		mov al, [si]
+		mov bl, [di]
+		mov [si], bl
+		mov [di], al
+		inc si
+		inc di
+		loop doSwap                       
+		                                         
+	ret		                                         
+swapDigitsBetweenNumbers endp
                          
 determineSubtractionSign proc
         
@@ -359,7 +548,8 @@ determineSubtractionSign proc
    		
 	ret
 determineSubtractionSign endp
-
+      
+      
               
 outputResult PROC	
 	
@@ -433,6 +623,9 @@ readNumberInput PROC	; note: input does not work via numpad. normal 0 -> 9 in ke
 	        cmp al, 45	; - subtraction operation
 	        je set_sub_operation
 	        
+	        cmp al, 42	; * addition operation
+	        je set_mul_operation
+	        
 	   	cmp al, 48	; validate if ascii code is lower than {ascci code 48, decimal 0}, if so, not a valid number, ask digit again
 	   	jl not_a_number
 	   	
@@ -470,6 +663,14 @@ readNumberInput PROC	; note: input does not work via numpad. normal 0 -> 9 in ke
 	   		jne  inputIsFinished	; operation has already been set.
 	   		
 	   		mov operation, '-'
+	   		
+	   		jmp inputIsFinished
+	   		
+	   	set_mul_operation:
+	   		cmp operation, 0
+	   		jne  inputIsFinished	; operation has already been set.
+	   		
+	   		mov operation, '*'
 	   		
 	   		jmp inputIsFinished
 	   		   	
