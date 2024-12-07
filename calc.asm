@@ -19,6 +19,7 @@
 	numberTwo db length dup(0)	; input number 2 array
 		 
 	remainder db length dup(0)	; input number 2 array
+	coeficient db 0			; references the coeficient in the divisor algorithm
 	
 	operation db 0			; specifies the operation between the numbers (+, - , /, v (v -> sqrt, only uses one number))
 	
@@ -27,27 +28,27 @@
 	resultSign db 0			; represents the sign of the result of an operation with unsigned numbers
 	
 	anotherCounter db 0	; used for multiplication algorithm
-	dividendPointer dw 0	; in the context of division, the dividend will be numberOne
+	dividendPointer dw 0	
 	anotherCarryFlag db 0	; only god and fuck knows what this is for... prolly subtraction
 	
-	mem1 dw 0
-	mem2 dw 0
-	mem3 dw 0
-	mem4 dw 0
-	mem5 dw 0
-	mem6 dw 0
-	mem7 dw 0
-	mem8 dw 0
-	mem9 dw 0
-	tmp1 db length dup(0)		; auxiliary number array 
-	tmp2 db length dup(0)		; auxiliary number array 
-	tmp3 db length dup(0)		; auxiliary number array 
-	tmp4 db length dup(0)		; auxiliary number array 
-	tmp5 db length dup(0)		; auxiliary number array 
-	tmp6 db length dup(0)		; auxiliary number array 
-	tmp7 db length dup(0)		; auxiliary number array 
-	tmp8 db length dup(0)		; auxiliary number array 
-	tmp9 db length dup(0)		; auxiliary number array
+	mem1 dw 0		; reserved to reference operand 1 array memory address
+	mem2 dw 0 		; reserved to reference operand 2 array memory address
+	mem3 dw 0       	; reserved to reference result array memory address
+	mem4 dw 0       	; available
+	mem5 dw 0       	; available 
+	mem6 dw 0       	; available 
+	mem7 dw 0       	; available 
+	mem8 dw 0       	; available 
+	mem9 dw 0       	; available 
+	tmp1 db length dup(0)	; reserved for mulDiv, carries the result between iterations 
+	tmp2 db length dup(0)	; reserved for mulDiv, used to subtract the second operand in each iteration
+	tmp3 db length dup(0)	; reserved for mulDiv, used to determine the greatest coeficient of divisor (that's it's mutiplication by divisor is lower than the remainder)
+	tmp4 db length dup(0)	; 
+	tmp5 db length dup(0)	; reserved for mulDiv, used to copy the second operand into a discartable array
+	tmp6 db length dup(0)	; available auxiliary number array 
+	tmp7 db length dup(0)	; available auxiliary number array 
+	tmp8 db length dup(0)	; available auxiliary number array 
+	tmp9 db length dup(0)	; available auxiliary number array
 	
 	
 .CODE
@@ -69,17 +70,17 @@ MAIN PROC
         	
         	call preformOperation	; maps te value in operation to the corresponding procedure
         	
-        	call outputResult       ; prints the result
+        	call outputResult       ; prints the result to the console
          	                                  
-         	call putANewLineInTheConsole	; does what the name says
+         	call putANewLineInTheConsole	; does what the procedure name says
          	         	                            
-		; reset variables, the code flow requires these variables to be 0 at the begining of the iteration
-         	lea si, result
+		; reset variables, the code flow requires these variables to be 0 at the begining of each operation
+         	lea si, result		; zero every digit of the result
          	call zeroNumber
-         	lea si, quotient
+         	lea si, quotient        ; zero every digit of the result
          	call zeroNumber	
-         	mov operation, 0	
-         	mov resultSign, 0
+         	mov operation, 0	; zero operation
+         	mov resultSign, 0       ; set result sign to positive
          	
         	jmp mainCycle		; repeat
         
@@ -94,6 +95,9 @@ preformOperation proc
 	
 	lea di, numberTwo
  	mov mem2, di   		; second operand
+ 	
+ 	lea bx, result
+ 	mov mem3, bx
  	                    
 	cmp operation, '+'
 	je addNumbers
@@ -127,8 +131,8 @@ integerDivision proc
 		
 		; increase current number in remainder by 1 order of magnitude		
 		lea si, remainder	; start at the leftmost position of the array and override it with the next digit                                  
-		lea di, mem1 
-		add di, dividendPointer
+		lea di, numberOne 
+		add di, dividendPointer ; move di into dividend pointer
 		mov cx, length - 1	; preform one less shift, because that one last shift would pull data from outside the array memory space
 		
 		leftShitRemainder:		; increase every digit by a order of magnitude
@@ -143,7 +147,7 @@ integerDivision proc
 		
 		; determine if the remainder is greater or equal to the divisor
 		lea si, remainder	                    
-		lea di, mem2
+		lea di, numberTwo
 		
 		call determineSubtractionSign ; determine if the remainder is above or equal to the divisor (0 greater or equal, 1 below)
 		
@@ -157,19 +161,22 @@ integerDivision proc
 	     	
 	
 	determineDivisorCoeficient:	; find the greatest coeficient of divisor such that it's below or equal to the remainder
-	
-		mov cx, 9	; multiplication dencremental coeficient (9, 8, 7, ..., 2, 1)
+	        
+	        ; WARNING: do not change coeficient to cx cus it calls the determineSubtractionSign and it overrides cx. using coeficient is safe
+	        ; starting at 0 and incrementing. Starting at 9 will take longer most of the times
+		mov coeficient, 0	; divisor coeficient (0, 1, 2, ..., 8, 9)
 		
-		findDivisorCoeficientStart:
+		findDivisorCoeficient:
 			; in order to use multiplication, both operands need to be arrays of digits
 			; we're mapping our multiplication increment to an array and send it as that
 			lea di, tmp3 + length - 1	; load the address of the last (rightmost, least significant) element of tmp array	
-			mov [di], cl                    ; move the coeficient value into least significant position of tmp array
+			mov al, coeficient
+			mov [di], al		; move the coeficient value into least significant position of tmp array
 					         
   			lea di, numberTwo	; divisior
   			mov mem1, di
   	
-  			lea di, tmp1		; coeficient
+  			lea di, tmp3		; coeficient
   			mov mem2, di
   	
   			lea di, result		; result
@@ -177,28 +184,47 @@ integerDivision proc
 			 			 		      	
         		call mulDiv
         		
-        		lea si, remainder 	; put si in the memory address of the fist element of the numerOne array
-			lea di, result		; put di in the memory address of the fist element of the numerTwo array
-        		
+        		; validate if result is above or equal to the remainder
+        		lea si, result		
+			lea di, remainder 	
         		call determineSubtractionSign
         		
+        		; reset result
+        		lea si, result
+        		call zeroNumber
+        		
+        		; 2 stop conditions, coeficient found or reached max number of iterations. Stop when any of them hits
+        	
+        		; First
+        		; Validate if the mutiplication of the coeficient by the divisor is above or equal to the remainder ( bx = 0 )
+        		; If is coeficient multiplication is below than the remainder ( bx = 1 ), increase the coeficient by one and try again
+        		; until the coeficient multiplication * divisor is above or equal to the remainder
         		cmp bx, 0
-        		je updateRemainderAndQuotient
+        		je updateRemainderAndQuotient         		        	        		
         		
-        		dec cx
-        		
-        		loop findDivisorCoeficientStart
-        	
+        		; Second
+        		; Stop after 9 was processed has a possible coeficient. 
+        		; When this happens, the inc below will overflow coeficient by one. We'll fix it a couple lines below
+        		cmp coeficient, 9
+        		inc coeficient        		
+        		jne findDivisorCoeficient
+        	        
+        	        ; coeficient overflows by one (to 10). Maximum number of coeficient is 9. This because we're using the decimal numebr system nerd
+        	        dec coeficient	; correct overflow of coeficient
+        	        
         	updateRemainderAndQuotient:
-        	
+        		
         	; update quotient
-        	lea di, numberTwo	; divisior , first operand for mul
+        	; increase current quotient by 1 order of magnitude
+        	lea di, quotient	; divisior , first operand for mul
   		mov mem1, di
   	        
+  	        lea di, tmp2 + length - 1 	; load the address of the last (rightmost, least significant) element of tmp2 array	
+		mov [di], 0			; zero out right most position 
   	        lea di, tmp2 + length - 2	; load the address of the second last (rightmost, second least significant) element of tmp2 array	
-		mov [di], 1			; multiply by 10
+		mov [di], 1			; mov 1, array now represents the number 10
   	        
-  		lea di, tmp1		; coeficient , second operand for mul
+  		lea di, tmp2		; coeficient , second operand for mul
   		mov mem2, di
   	
   		lea di, result	; result , where to store result
@@ -207,27 +233,39 @@ integerDivision proc
         	call mulDiv
         	
         	lea si, result		; copy from
-        	lea di, quotient        ; copy to
+        	lea di, quotient	; copy to
         	mov cx, length		; result
         	call copyArray
         	
-        	lea si, quotient
-        	lea di, tmp3		; tmp3 was used as the coeficient in the previous step. Is stil holds (or should at least) the coeficient value
+        	; add the units value to the quotient
+        	lea si, quotient	
+        	lea di, tmp3 + length - 1	; load memory address of the last element to then insert units value
+        	mov al, coeficient		; mov coeficient into intermediary register
+		mov [di], al			; move coeficient to units place of tmp array               	
+		mov al, 0
+		lea di, tmp3			; load di to start of array
         	mov cx, length
         	call addNumbers
         	
-        	lea si, result		; copy from
-        	lea di, quotient        ; copy to
+        	lea si, result		; copy from result
+        	lea di, quotient	; copy to quotient
         	mov cx, length		; result
         	call copyArray
+        	
+        	lea si, result		
+        	call zeroNumber		; reset result array
         	        	
         	; update remainder
         	
-        	lea di, tmp3		; tmp3 was used as the coeficient in the previous step. Is stil holds (or should at least) the coeficient value
+        	lea di, tmp6 + length - 1
+        	mov al, coeficient		; mov coeficient into intermediary register
+		mov [di], al
+		mov al, 0 
+        	lea di, tmp6
         	mov mem1, di
         	
-        	lea di, numberTwo
-        	mov mem2, di
+        	lea di, numberTwo 	; divisor input
+        	mov mem2, di            ; use tmp array, (because subNumber decrements)
         	
         	lea di, result
  		mov mem3, di
@@ -251,17 +289,17 @@ integerDivision proc
         	
         	lea si, numberOne
         	call lengthOfNumber
-        	cmp dx, dividendPointer
-        	jb updateRemainder 
+        	cmp di, length - 1	; stop when the dividen pointer reached the end of the array
+        	jb updateRemainder
+        	
+        	lea si, quotient	; copy from
+        	lea di, result		; copy to
+        	mov cx, length		; result
+        	call copyArray 
         ret
 integerDivision endp
 
-mulDiv proc
-
-	; si : first operand
-	; di : result
-	; bx : second operand
-	
+mulDiv proc	
 	
 	; Multiplication is implemented by adding the same number a bunch of times
 	; 2 * 3, is done by adding the number 2 to 0, 3 times. ( 0 + 2 + 2 + 2 ).
@@ -271,47 +309,76 @@ mulDiv proc
 	; on each iteration, we subtract that value by 1.
 	; We preform this while the second operand is different from zero
 	
-	additionCycleMulDiv:
-		lea si, numberOne
-		lea di, numberTwo
-		lea bx, result
+	; si : first operand
+	; di : result
+	; bx : second operand
+	
+	; tmp1 used to save the consecutive additions on each iteration
+	; tmp2 used to represent the number 1 to subtract the divisor on each iteration
+	; tmp5 second operand is copied into a discartable
+	
+	
+	additionCycleMulDiv:                                 
+		mov bx, mem2		; reference mem2 (second operand array memory address)
+		lea si, [bx]		; indirectly reference mem2 value
+		lea di, tmp5		; copy second operand into discartable array, (because mulDiv does repeted sums and decrement second operand is zero)
+		mov cx, length
+        	call copyArray 		
+		lea di, tmp5		; second operand
 		
-		call arrayIsZero        ; validate if we have any addition to preform
+		; load input variables into apropriate register
+		mov bx, mem1		; reference mem1 (first operand array memory address)
+		lea si, [bx]		; indirectly reference mem1 value     					
+		
+		mov bx, mem3		; reference mem3 (result variable array memory address)
+		lea bx, [bx]		; indirectly reference mem3 value
+		
+		call arrayIsZero	; validate if we have any addition to preform , input di register
 		
 		cmp dx, 0
-		je mulCompleteMulDiv            ; if zero, no addition remains. Exit the addition loop
+		je mulCompleteMulDiv	; if zero, no addition remains. Exit the addition loop
 		
-		; Access the result from the previous iteration. If it's the first iteration, tmp has a zero number
-		lea si, tmp1
-		lea di, result
+		; Access the result from the previous iteration and store it in the result. If it's the first iteration, tmp has a zero number
+		lea si, tmp1		; copy value from previous iteration
+		mov bx, mem3		; into reference memory mem3 (result variable array memory address)
+		lea di, [bx]            ; indirectly reference mem3
+		mov cx, length
+		call copyArray		; execute copy 
+		
+		mov bx, mem1		; reference mem1 (first operand array memory address)
+		lea si, [bx]		; indirectly reference mem1 value     
+		mov bx, mem3		; reference mem3 (result variable array memory address)
+		lea di, [bx]		; indirectly reference mem3 value
+		
+		call addNumbers		; execute addition
+		
+		; save result for next iteration. Subtraction is going to write over the result variable
+		mov bx, mem3		; reference mem3 (result variable array memory address)
+		lea si, [bx]
+		lea di, tmp1		; save the result for next interation
 		mov cx, length
 		call copyArray
 		
-		lea si, numberOne
-		lea di, result
+		mov bx, mem2		; reference mem2 (second operand array memory address)
+		lea si, [bx]		; indirectly reference mem2 value
 		
-		call addNumbers        ; execute addition
+		mov [tmp2 + length - 1], 1	; setup array representing number 1		
+		lea di, tmp2			; load array memory address for subtraction
 		
-		; save result for next iteration. Subtraction is going to wirte over the result variable
-		lea si, result
-		lea di, tmp1
-		mov cx, length
-		call copyArray
-		
-		
-		lea si, numberTwo        ; load into si the memory address of numberTwo
-		mov [tmp2 + length - 1], 1    ; setup array representing number 1.
-		lea di, tmp2                    ; load array memory address for subtraction
-		lea bx, result            ; load result
-		
-		call subNumbersMul              ; execute subtraction
+		mov bx, mem3		; reference mem3 (result variable array memory address)
+		lea bx, [bx]
+		call subNumbersMul	; execute subtraction
 		
 		; subtraction saved the result in the result variable
 		; for the algorithm, the numberTwo itself needs to be
 		; the one decremented, so we're going to copy the value
 		; from result to numberTwo
-		lea si, result
-		lea di, numberTwo
+		
+		mov bx, mem3		; reference mem3 (result variable array memory address)
+		lea si, [bx]
+		
+		mov bx, mem2		; reference mem2 (second operand array memory address)
+		lea di, [bx]
 		mov cx, length
 		
 		mov cx, length
@@ -323,10 +390,18 @@ mulDiv proc
 	mulCompleteMulDiv:
 	
 	lea si, tmp1
-	lea di, result
+	mov bx, mem3		
+	lea di, [bx]
 	mov cx, length
 	call copyArray
 	
+	; zero out accumulator array
+	lea si, tmp1
+	call zeroNumber
+	
+	; zero out subtraction tmp array
+	lea si, tmp2 + length - 1
+	mov [si], 0
 	
 	ret
 mulDiv endp
@@ -342,85 +417,10 @@ mulSetup proc
 	lea bx, result
 	mov mem3, bx	   	
 	
-	call mult
+	call mulDiv
    
 	ret
 mulSetup endp
-
-mult proc
-	
-	; si : first operand
-	; di : result
-	; bx : second operand
-	
-	
-	; Multiplication is implemented by adding the same number a bunch of times
-	; 2 * 3, is done by adding the number 2 to 0, 3 times. ( 0 + 2 + 2 + 2 ).
-	; The zero is the begining state of the result, when the additions are complete,
-	; the result variable already contains the value.
-	; The number of time the addition happens is the number of the second operand
-	; on each iteration, we subtract that value by 1.
-	; We preform this while the second operand is different from zero                                             	 	                                                              	                                                                                                                          
-                                                               
-	additionCycle:                                                               
-		lea si, numberOne
-		lea di, numberTwo
-		lea bx, result
-		
-		call arrayIsZero		; validate if we have any addition to preform
-	
-		cmp dx, 0	       	
-		je mulComplete			; if zero, no addition remains. Exit the addition loop                                                                                                                  
-	 
-	 	; Access the result from the previous iteration. If it's the first iteration, tmp has a zero number
-		lea si, tmp1
-		lea di, result
-		mov cx, length
-		call copyArray
-	               
-		lea si, numberOne
-		lea di, result
-			               
-		call addNumbers		; execute addition
-		 
-		; save result for next iteration. Subtraction is going to wirte over the result variable
-		lea si, result
-		lea di, tmp1           
-		mov cx, length
-		call copyArray
-		
-		
-		lea si, numberTwo		; load into si the memory address of numberTwo
-		mov [tmp2 + length - 1], 1	; setup array representing number 1. 
-		lea di, tmp2                    ; load array memory address for subtraction		
-		lea bx, result    		; load result
-		
-		call subNumbersMul              ; execute subtraction
-		
-		; subtraction saved the result in the result variable
-		; for the algorithm, the numberTwo itself needs to be 
-		; the one decremented, so we're going to copy the value
-		; from result to numberTwo
-		lea si, result			
-		lea di, numberTwo
-		mov cx, length		
-		
-		mov cx, length
-		call copyArray
-		
-		jmp additionCycle				
-	
-	
-	 mulComplete:
-	 
-	 lea si, tmp1
-	 lea di, result
-	 mov cx, length
-	 call copyArray
-	 
-        
-	ret
-mult endp
 
 lengthOfNumber proc
         
@@ -454,7 +454,6 @@ arrayIsZero proc
 	; dx will contain a 0, otherwise, dx will contain a 1
 	
     	; input data:
-    	; cx : length of the array
     	; di : points to the start of the number array
     	        
 	; output data:   	        
@@ -465,7 +464,7 @@ arrayIsZero proc
     	
     	validate:
     		cmp [di], 0	; compare digit to zero
-    		jne notZero     ; if the digit in not a zero, exit the loop and mark the flag as 1 ( 1: array is a non-zero number)
+    		jne notZero	; if the digit in not a zero, exit the loop and mark the flag as 1 ( 1: array is a non-zero number)
     	        
     	        inc di		; move to next digit
     		
@@ -505,15 +504,15 @@ subNumbersMul proc
 		        
 		subDontSetCarryMul:
 		sub al, [di]			; move the subtraction result to the corresponding element of the result array
-		sub al, anotherCarryFlag        ; subtract the carry from the previous subtraction
+		sub al, anotherCarryFlag	; subtract the carry from the previous subtraction
 		mov anotherCarryFlag, 0		; clear carry flag for subtraction
 		mov [bx], al			; move the subtraction result to the corresponding element of the result array
 		        
 		                    
 		subContinueMul:
 		dec si		; move si pointer to the left element of the array (one order greater) 
-		dec di  	; move di pointer to the left element of the array (one order greater)
-		dec bx  	; move bx pointer to the left element of the array (one order greater)
+		dec di		; move di pointer to the left element of the array (one order greater)
+		dec bx		; move bx pointer to the left element of the array (one order greater)
 		mov al, 0	; clear ax for following operations
 	        
         loop subElementsMul
@@ -766,7 +765,7 @@ readNumberInput PROC	; note: input does not work via numpad. normal 0 -> 9 in ke
 	    
 	; DX already contains the promt address (or atleast it should be idk)
 	mov ah, 09h	; load function to print out sting in DX
-	int 21h         ; execute 09h                                                           
+	int 21h		; execute 09h                                                           
 	     
 	mov cx, length	; max digits in the number	         		
 	
@@ -872,6 +871,8 @@ readNumberInput PROC	; note: input does not work via numpad. normal 0 -> 9 in ke
 	        	cmp cx, 0	; limit characters to pre-defined limit
 	        	je deletePrev
 	        	
+	        	; todo validate divisor. Must not be zero.  You can use the arrayIsZero procedure after the input has been completed 
+	        	
 	        	; digits will be pushed into the stack on their correct order of magnitude
 	        	; they will later on, the popped out and inserted right to left (least significative to most significative)
 	        	; doing this to avoid this routine rightShiftUntilTheUnitDigitOfTheInputIsInTheCorrespondingUnitPositionInTheNumberArray:
@@ -914,7 +915,7 @@ readNumberInput ENDP
 zeroNumber proc
 	       
 	; input: number to reset is defined by the addresss in si
-	; after function: si register is reset to start of array
+	; after function: si register points to the start of the array
 	       
 	mov cx, length
 	
@@ -925,6 +926,8 @@ zeroNumber proc
 		inc si
 		loop zeroDigit
 	
+	; WARNING: do not add -1 to length. The previous loop makes si overflow the array by one position
+	; and therefore, subtracting si by length returns to the first element of the array
 	sub si, length	
 			
 	ret
@@ -997,5 +1000,6 @@ exitProgram proc
   		               
 	ret	               
 exitProgram endp	
+
 	
 END	
