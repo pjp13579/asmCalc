@@ -4,8 +4,9 @@
 .stack 256
 
 .DATA
-	inputOneMessage db 'Insert first number: $'
-	inputTwoMessage db 'Insert second number: $'
+	; deprecated inputOneMessage db 'Insert first number: $'
+	; deprecated inputTwoMessage db 'Insert second number: $'
+	inputExpressionMessage db 'Insert math expression: $'
 	resultPreText db 'result is: $'
 	newline db 13, 10, '$'			; Carriage Return and Line Feed make up a newline.
         backspace_string db 8, ' ', 8, '$'	; meant to be used for data validation, when user does not press the backspace key
@@ -44,7 +45,7 @@
 	tmp2 db length dup(0)	; reserved for mulDiv, used to subtract the second operand in each iteration
 	tmp3 db length dup(0)	; reserved for mulDiv, used to determine the greatest coeficient of divisor (that's it's mutiplication by divisor is lower than the remainder)
 	tmp4 db length dup(0)	; 
-	tmp5 db length dup(0)	; reserved for mulDiv, used to copy the second operand into a discartable array
+	tmp5 db length dup(0)	; reserved for mulDiv, used to copy the second operand into a descartable array
 	tmp6 db length dup(0)	; available auxiliary number array 
 	tmp7 db length dup(0)	; available auxiliary number array 
 	tmp8 db length dup(0)	; available auxiliary number array 
@@ -58,17 +59,24 @@ MAIN PROC
  	call config	; initial configurations 	
         
         mainCycle:
-        	lea dx, inputOneMessage	; load address of number1 prompt message for input prodecure
+        	lea dx, inputExpressionMessage	; load address of dynamic input prompt message for input prodecure
+        	mov ah, 09h	; load function to print out inputExpressionMessage prompt
+		int 21h		; execute 09h                                                           
+        	
+        	
+        	; deprecated lea dx, inputOneMessage	; load address of number1 prompt message for input prodecure
         	lea si, numberOne	; load address of number1 array for input prodecure
-        	call zeroNumber		; zero every digit of the array        
+        	call zeroNumber		; zero every digit of the array numberOne        
         	call readNumberInput	; read input of first number           
         
-        	lea dx, inputTwoMessage	; load address of number2 prompt message for input prodecure
+        	; deprecated lea dx, inputTwoMessage	; load address of number2 prompt message for input prodecure
         	lea si, numberTwo       ; load address of number2 array for input prodecure     
-        	call zeroNumber		; zero every digit of the array
+        	call zeroNumber		; zero every digit of the array numberTwo
         	call readNumberInput	; read input of second number      
         	
         	call preformOperation	; maps te value in operation to the corresponding procedure
+        	
+        	call putANewLineInTheConsole	; does what the procedure name says
         	
         	call outputResult       ; prints the result to the console
          	                                  
@@ -760,12 +768,7 @@ readNumberInput PROC	; note: input does not work via numpad. normal 0 -> 9 in ke
 	; the number will be stored in an arbitrary array
 	;
 	; the prompt is defined by the address in the DX register, should be of the first index of the string
-	; the array is defined by the address in the SI register, should be of the address of the first index in the array
-	   
-	    
-	; DX already contains the promt address (or atleast it should be idk)
-	mov ah, 09h	; load function to print out sting in DX
-	int 21h		; execute 09h                                                           
+	; the array is defined by the address in the SI register, should be of the address of the first index in the array	 
 	     
 	mov cx, length	; max digits in the number	         		
 	
@@ -903,7 +906,7 @@ readNumberInput PROC	; note: input does not work via numpad. normal 0 -> 9 in ke
 		dec si          ; decrease array index
 	        loop popIntoDigitIntoArray	; complete iterations to pop the remainding digits of the number into the array	
 					 		
-	call putanewlineintheconsole    ; newline int the console
+	; deprecated, implemented for 2 separate inputs call putanewlineintheconsole    ; newline int the console
 	mov ax, 0
 	mov dx, 0
 	mov si, 0
@@ -1000,6 +1003,5 @@ exitProgram proc
   		               
 	ret	               
 exitProgram endp	
-
 	
 END	
