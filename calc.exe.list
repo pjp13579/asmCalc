@@ -1,0 +1,1067 @@
+EMU8086 GENERATED LISTING. MACHINE CODE <- SOURCE.
+ 
+calc.exe -- emu8086 assembler version: 4.05  
+ 
+[ 12/13/2024  --  4:08:41 PM ] 
+ 
+===================================================================================================
+[LINE]     LOC: MACHINE CODE                          SOURCE
+===================================================================================================
+ 
+[   0]        :                                       ;calculator
+[   1]        :                                       .MODEL SMALL
+[   2]        :                                       
+[   3]        :                                       .stack 256
+[   4]        :                                       
+[   5]        :                                       .DATA
+[   6]    0100: 49 6E 73 65 72 74 20 66 69 72 73 74   	inputOneMessage db 'Insert first number: $'
+                20 6E 75 6D 62 65 72 3A 20 24       
+[   7]    0116: 49 6E 73 65 72 74 20 73 65 63 6F 6E   	inputTwoMessage db 'Insert second number: $'
+                64 20 6E 75 6D 62 65 72 3A 20 24    
+[   8]    012D: 72 65 73 75 6C 74 20 69 73 3A 20 24   	resultPreText db 'result is: $'
+                                                    
+[   9]    0139: 0D 0A 24                              	newline db 13, 10, '$'			; Carriage Return and Line Feed make up a newline.
+[  10]    013C: 08 20 08 24                           backspace_string db 8, ' ', 8, '$'	; meant to be used for data validation, when user does not press the backspace key
+[  11]    0140: 20 08 24                              removeCurrentCharacter db ' ', 8, '$'   ; meant to be used when user presses the backspace key
+[  12]    0143: 20 24                                 addSpace db 32, '$'			; prints a space ' '
+[  13]    0145: 2D 24                                 negativeResultString db 45, '$'         ; prints a minus '-'
+[  14]        :                                       
+[  15]        :                                       	length equ 4			; define constant with the length of the numbers
+[  16]        :                                       	lengthTimesTwo equ length * 2	; for the multiplication result. The maximum size of the result will be the sum of the length of both operands (operands are of the same size, and therefore time 2)		
+[  17]    0147: 00 00 00 00                           	numberOne db length dup(0)	; input number 1 array
+[  18]    014B: 00 00 00 00                           	numberTwo db length dup(0)	; input number 2 array
+[  19]        :                                       		
+[  20]    014F: 00 00 00 00                           	remainder db length dup(0)	; input number 2 array
+[  21]    0153: 00                                    	coeficient db 0			; references the coeficient in the divisor algorithm
+[  22]        :                                       	
+[  23]    0154: 00                                    	operation db 0			; specifies the operation between the numbers (+, - , /, v (v -> sqrt, only uses one number))
+[  24]        :                                       	
+[  25]    0155: 00 00 00 00                           	result db length dup(0)		; output result array
+[  26]    0159: 00 00 00 00                           	quotient db length dup(0)	; ouput quotient
+[  27]    015D: 00                                    	resultSign db 0			; represents the sign of the result of an operation with unsigned numbers
+[  28]        :                                       	
+[  29]    015E: 00                                    	anotherCounter db 0	; used for multiplication algorithm
+[  30]    015F: 00                                    	dividendPointer db 0	
+[  31]    0160: 00                                    	anotherCarryFlag db 0	; only god and fuck knows what this is for... prolly subtraction
+[  32]        :                                       	
+[  33]    0161: 00 00                                 	mem1 dw 0		; reserved to reference operand 1 array memory address
+[  34]    0163: 00 00                                 	mem2 dw 0 		; reserved to reference operand 2 array memory address
+[  35]    0165: 00 00                                 	mem3 dw 0       	; reserved to reference result array memory address
+[  36]    0167: 00 00                                 	mem4 dw 0       	; available
+[  37]    0169: 00 00                                 	mem5 dw 0       	; available
+[  38]    016B: 00 00                                 	mem6 dw 0       	; available
+[  39]    016D: 00 00                                 	mem7 dw 0       	; available
+[  40]    016F: 00 00                                 	mem8 dw 0       	; available
+[  41]    0171: 00 00                                 	mem9 dw 0       	; available
+[  42]    0173: 00 00 00 00                           	tmp1 db length dup(0)	; reserved for mulDiv, carries the result between iterations
+[  43]    0177: 00 00 00 00                           	tmp2 db length dup(0)	; reserved for mulDiv, used to subtract the second operand in each iteration
+[  44]    017B: 00 00 00 00                           	tmp3 db length dup(0)	; reserved for mulDiv, used to determine the greatest coeficient of divisor (that's it's mutiplication by divisor is lower than the remainder)
+[  45]    017F: 00 00 00 00                           	tmp4 db length dup(0)	;
+[  46]    0183: 00 00 00 00                           	tmp5 db length dup(0)	; reserved for mulDiv, used to copy the second operand into a discartable array
+[  47]    0187: 00 00 00 00                           	tmp6 db length dup(0)	; reserved for integerDivision, used to copy the coeficient into a discartable array
+[  48]    018B: 00 00 00 00                           	tmp7 db length dup(0)	; reserved for integerDivision, used to copy the second operand into a discartable array
+[  49]    018F: 00 00 00 00                           	tmp8 db length dup(0)	; available auxiliary number array
+[  50]    0193: 00 00 00 00                           	tmp9 db length dup(0)	; available auxiliary number array
+[  51]        :                                       	
+[  52]        :                                       	
+[  53]        :                                       .CODE
+[  54]        :                                       
+[  55]    01A0:                                       MAIN PROC
+[  56]        :                                       	
+[  57]    01A0: E8 8B 04                              	call config	; initial configurations 	
+[  58]        :                                       
+[  59]    01A3:                                       mainCycle:
+[  60]    01A3: BA 00 00                              	lea dx, inputOneMessage	; load address of number1 prompt message for input prodecure
+[  61]    01A6: BE 47 00                              	lea si, numberOne	; load address of number1 array for input prodecure
+[  62]    01A9: E8 4D 04                              	call zeroNumber		; zero every digit of the array
+[  63]    01AC: E8 88 03                              	call readNumberInput	; read input of first number
+[  64]        :                                       
+[  65]    01AF: BA 16 00                              	lea dx, inputTwoMessage	; load address of number2 prompt message for input prodecure
+[  66]    01B2: BE 4B 00                              	lea si, numberTwo       ; load address of number2 array for input prodecure
+[  67]    01B5: E8 41 04                              	call zeroNumber		; zero every digit of the array
+[  68]    01B8: E8 7C 03                              	call readNumberInput	; read input of second number
+[  69]        :                                       	
+[  70]    01BB: E8 31 00                              	call preformOperation	; maps te value in operation to the corresponding procedure
+[  71]        :                                       	
+[  72]    01BE: E8 43 03                              	call outputResult       ; prints the result to the console
+[  73]        :                                       	
+[  74]    01C1: E8 42 04                              	call putANewLineInTheConsole	; does what the procedure name says
+[  75]        :                                       	         	
+[  76]        :                                       		; reset variables, the code flow requires these variables to be 0 at the begining of each operation
+[  77]    01C4: BE 55 00                              	lea si, result		; zero every digit of the result
+[  78]    01C7: E8 2F 04                              	call zeroNumber
+[  79]    01CA: BE 59 00                              	lea si, quotient        ; zero every digit of the division quotient
+[  80]    01CD: E8 29 04                              	call zeroNumber
+[  81]    01D0: BE 4F 00                              	lea si, remainder       ; zero every digit of the remainder
+[  82]    01D3: E8 23 04                              	call zeroNumber	
+[  83]    01D6: C6 06 54 00 00                        	mov operation, 0	; zero operation
+[  84]    01DB: C6 06 5D 00 00                        	mov resultSign, 0       ; set result sign to positive
+[  85]    01E0: C6 06 53 00 00                        	mov coeficient, 0       ; zero division quotient
+[  86]    01E5: C6 06 5F 00 00                        	mov dividendPointer, 0
+[  87]        :                                       	
+[  88]    01EA: EB B7                                 	jmp mainCycle		; repeat
+[  89]        :                                       
+[  90]    01EC: E8 4D 04                              call exitProgram	; exit program
+[  91]        :                                       
+[  92]        :                                       MAIN ENDP
+[  93]        :                                       
+[  94]    01EF:                                       preformOperation proc
+[  95]        :                                       
+[  96]    01EF: BE 47 00                              	lea si, numberOne
+[  97]    01F2: 89 36 61 00                           	mov mem1, si		; first operand
+[  98]        :                                       	
+[  99]    01F6: BF 4B 00                              	lea di, numberTwo
+[ 100]    01F9: 89 3E 63 00                           	mov mem2, di   		; second operand
+[ 101]        :                                       	
+[ 102]    01FD: BB 55 00                              	lea bx, result
+[ 103]    0200: 89 1E 65 00                           	mov mem3, bx
+[ 104]        :                                       	
+[ 105]    0204: 80 3E 54 00 2B                        	cmp operation, '+'
+[ 106]    0209: 75 03 E9 94 02                        	je addNumbers
+[ 107]        :                                       	
+[ 108]    020E: 80 3E 54 00 2D                        	cmp operation, '-'
+[ 109]    0213: 75 03 E9 30 02                        	je subNumbers
+[ 110]        :                                       	
+[ 111]    0218: 80 3E 54 00 2A                        	cmp operation, '*'
+[ 112]    021D: 75 03 E9 A9 01                        	je mulSetup
+[ 113]        :                                       	
+[ 114]    0222: 80 3E 54 00 2F                        	cmp operation, '/'
+[ 115]    0227: 74 09                                 	je integerDivision
+[ 116]        :                                       	
+[ 117]    0229: 80 3E 54 00 76                        	cmp operation, 'v'
+[ 118]    022E: 74 01                                 	je sqrt
+[ 119]        :                                       
+[ 120]        :                                       ; the program works, there is not ret in here... on who's witchcraft does it work??
+[ 121]        :                                       ; maybe the ret on each of the operations returns to the main cycle. I'm complety oblivious
+[ 122]    0230: C3                                    ret
+[ 123]        :                                       preformOperation endp
+[ 124]        :                                       
+[ 125]    0231:                                       sqrt proc
+[ 126]        :                                       
+[ 127]    0231: C3                                    	ret
+[ 128]        :                                       sqrt endp
+[ 129]        :                                       
+[ 130]    0232:                                       integerDivision proc
+[ 131]        :                                       	                         		
+[ 132]    0232:                                       	updateRemainder:
+[ 133]        :                                       	
+[ 134]        :                                       		; update remainder
+[ 135]        :                                       		; remainder = remainder * 10 + dividend[dividendPointer]
+[ 136]        :                                       	
+[ 137]        :                                       		; increase current number in remainder by 1 order of magnitude		
+[ 138]    0232: BE 4F 00                              		lea si, remainder	; start at the leftmost position of the array and override it with the next digit
+[ 139]    0235: BA 00 00                              		mov dx, 0		; reset dx
+[ 140]    0238: 8A 16 5F 00                           		mov dl, dividendPointer
+[ 141]    023C: BF 47 00                              		lea di, numberOne
+[ 142]    023F: 03 FA                                 		add di, dx              ; move di into the dividend unit defined by dividend pointer
+[ 143]    0241: B9 03 00                              		mov cx, length - 1	; preform one less shift, because that one last shift would pull data from outside the array memory space				
+[ 144]        :                                       		
+[ 145]    0244:                                       		leftShitfRemainder:		; increase every digit by a order of magnitude
+[ 146]    0244: 8A 44 01                              			mov al, [si + 1]	; get the digit at the right of the current position
+[ 147]    0247: 88 04                                 			mov [si], al            ; override current digit with the one at it's right
+[ 148]    0249: 46                                    			inc si			; move si into the next lower significance digit
+[ 149]    024A: E2 F8                                 			loop leftShitfRemainder	; repeat for remaining digits
+[ 150]        :                                       			
+[ 151]        :                                       		; add the unit digit
+[ 152]    024C: 8A 05                                 		mov al, [di]	; select the digit from dividend to put in the units place of remainder
+[ 153]    024E: 88 04                                 		mov [si], al	; move into the remainder
+[ 154]        :                                       		
+[ 155]        :                                       		; determine if the remainder is greater or equal to the divisor
+[ 156]    0250: BE 4F 00                              		lea si, remainder	
+[ 157]    0253: BF 4B 00                              		lea di, numberTwo
+[ 158]        :                                       		
+[ 159]    0256: E8 8A 02                              		call determineSubtractionSign ; determine if the remainder is above or equal to the divisor (0 greater or equal, 1 below)
+[ 160]        :                                       		
+[ 161]    0259: 83 FB 00                              		cmp bx, 0 ; if bx is 0, the remainder is above or equal to the divisor
+[ 162]    025C: 74 06                                 		je determineDivisorCoeficient
+[ 163]        :                                       		; EIII WATCH OUT: what will happen if the divisor is greater than the dividen? I guess this code will go apeshit. Come back to this... eventually
+[ 164]        :                                       		; maybe just validate if the division if above or equal to the divison, else quocient is 0?
+[ 165]        :                                       		     		
+[ 166]    025E: FE 06 5F 00                           		inc dividendPointer
+[ 167]    0262: EB CE                                 		jmp updateRemainder		
+[ 168]        :                                       	     	
+[ 169]        :                                       	
+[ 170]    0264:                                       	determineDivisorCoeficient:	; find the greatest coeficient of divisor such that it's below or equal to the remainder
+[ 171]        :                                       	
+[ 172]        :                                       	        ; WARNING: do not change coeficient to cx cus it calls the determineSubtractionSign and it overrides cx. using coeficient is safe
+[ 173]        :                                       	        ; starting at 0 and incrementing. Starting at 9 will take longer most of the times
+[ 174]    0264: C6 06 53 00 00                        		mov coeficient, 0	; divisor coeficient (0, 1, 2, ..., 8, 9)
+[ 175]        :                                       		
+[ 176]    0269:                                       		findDivisorCoeficient:
+[ 177]        :                                       			; in order to use multiplication, both operands need to be arrays of digits
+[ 178]        :                                       			; we're mapping our multiplication increment to an array and send it as that
+[ 179]    0269: BF 7E 00                              			lea di, tmp3 + length - 1	; load the address of the last (rightmost, least significant) element of tmp3 array. Used to represent the coeficient number in an array	
+[ 180]    026C: A0 53 00                              			mov al, coeficient
+[ 181]    026F: 88 05                                 			mov [di], al		; move the coeficient value into least significant position of tmp array
+[ 182]        :                                       					
+[ 183]    0271: BF 4B 00                              			lea di, numberTwo	; divisior
+[ 184]    0274: 89 3E 61 00                           			mov mem1, di
+[ 185]        :                                       	
+[ 186]    0278: BF 7B 00                              			lea di, tmp3		; coeficient
+[ 187]    027B: 89 3E 63 00                           			mov mem2, di
+[ 188]        :                                       	
+[ 189]    027F: BF 55 00                              			lea di, result		; result
+[ 190]    0282: 89 3E 65 00                           			mov mem3, di
+[ 191]        :                                       			 			 		      	
+[ 192]    0286: E8 B1 00                              		call mulDiv		; multiplicate coeficient by divisor
+[ 193]        :                                       		
+[ 194]        :                                       		
+[ 195]        :                                       		; validate if result is above or equal to the remainder
+[ 196]    0289: BE 55 00                              		lea si, result		
+[ 197]    028C: BF 4F 00                              			lea di, remainder 	
+[ 198]    028F: E8 51 02                              		call determineSubtractionSign	; result in bx
+[ 199]        :                                       		
+[ 200]        :                                       		; reset result
+[ 201]    0292: BE 55 00                              		lea si, result
+[ 202]    0295: E8 61 03                              		call zeroNumber
+[ 203]        :                                       		
+[ 204]        :                                       		; 2 stop conditions for the coeficient step
+[ 205]        :                                       		; Coeficient found or reached max number of iterations. Stop when any of them hits
+[ 206]        :                                       	
+[ 207]        :                                       		; First
+[ 208]        :                                       		; Validate if the mutiplication of the coeficient by the divisor is above or equal to the remainder ( bx = 0 )
+[ 209]        :                                       		; If is coeficient multiplication is below than the remainder ( bx = 1 ), increase the coeficient by one and try again
+[ 210]        :                                       		; until the coeficient multiplication * divisor is above or equal to the remainder
+[ 211]    0298: 83 FB 00                              		cmp bx, 0
+[ 212]    029B: 74 0B                                 		je updateRemainderAndQuotient         		        	        		
+[ 213]        :                                       		
+[ 214]        :                                       		; Second
+[ 215]        :                                       		; Stop after 9 was processed has a possible coeficient.
+[ 216]        :                                       		; When this happens, the inc below will overflow coeficient by one. We'll fix it a couple lines below
+[ 217]    029D: 80 3E 53 00 09                        		cmp coeficient, 9
+[ 218]    02A2: FE 06 53 00                           		inc coeficient        		        	
+[ 219]    02A6: 76 C1                                 		jbe findDivisorCoeficient
+[ 220]        :                                       	
+[ 221]        :                                       	        ; coeficient overflows by one (to 10). Maximum number of coeficient is 9. This because we're using the decimal numebr system nerd
+[ 222]        :                                       	        ; dec coeficient	; correct overflow of coeficient
+[ 223]        :                                       	
+[ 224]        :                                       	
+[ 225]    02A8:                                       	updateRemainderAndQuotient:
+[ 226]        :                                       		
+[ 227]    02A8: FE 0E 53 00                           		dec coeficient
+[ 228]        :                                       		
+[ 229]        :                                       		; increase current quotient by 1 order of magnitude (multiplication by 10)
+[ 230]    02AC: B9 03 00                              		mov cx, length - 1	; preform one less shift, because that one last shift would pull data from outside the array memory space				
+[ 231]    02AF: BE 59 00                              		lea si, quotient	
+[ 232]        :                                       	
+[ 233]    02B2:                                       	leftShitfRemainderDiv:		; increase every digit by a order of magnitude
+[ 234]    02B2: 8A 44 01                              			mov al, [si + 1]	; get the digit at the right of the current position
+[ 235]    02B5: 88 04                                 			mov [si], al            ; override current digit with the one at it's right
+[ 236]    02B7: 46                                    			inc si			; move si into the next lower significance digit
+[ 237]    02B8: E2 F8                                 			loop leftShitfRemainderDiv	; repeat for remaining digits
+[ 238]        :                                       	
+[ 239]        :                                       	; add the units value to the quotient
+[ 240]    02BA: A0 53 00                              	mov al, coeficient
+[ 241]    02BD: 88 04                                 	mov [si], al
+[ 242]        :                                       	
+[ 243]    02BF: BE 55 00                              	lea si, result		
+[ 244]    02C2: E8 34 03                              	call zeroNumber		; reset result array
+[ 245]        :                                       	        	
+[ 246]        :                                       	; update remainder
+[ 247]        :                                       	
+[ 248]    02C5: BF 8A 00                              	lea di, tmp6 + length - 1
+[ 249]    02C8: A0 53 00                              	mov al, coeficient		; mov coeficient into intermediary register
+[ 250]    02CB: 88 05                                 		mov [di], al
+[ 251]    02CD: B0 00                                 		mov al, 0
+[ 252]    02CF: BF 87 00                              	lea di, tmp6
+[ 253]    02D2: 89 3E 61 00                           	mov mem1, di
+[ 254]        :                                       	
+[ 255]        :                                       	; copy divisor into tmp6, and use tmp as second operand for multiplication        	
+[ 256]    02D6: BE 4B 00                              	lea si, numberTwo	; copy from divisor
+[ 257]    02D9: BF 8B 00                              	lea di, tmp7 		; copy to discartable array (value in this array will be zeroed)
+[ 258]    02DC: B9 04 00                              	mov cx, length		; result
+[ 259]    02DF: E8 EB 01                              	call copyArray        	
+[ 260]    02E2: BF 8B 00                              	lea di, tmp7
+[ 261]    02E5: 89 3E 63 00                           	mov mem2, di            ; use tmp array, (because subNumber decrements)
+[ 262]        :                                       	
+[ 263]    02E9: BF 55 00                              	lea di, result
+[ 264]    02EC: 89 3E 65 00                           		mov mem3, di
+[ 265]        :                                       		       	
+[ 266]    02F0: E8 47 00                              	call mulDiv
+[ 267]        :                                       	
+[ 268]    02F3: BE 55 00                              	lea si, result		; copy from
+[ 269]    02F6: BF 7F 00                              	lea di, tmp4		; copy to
+[ 270]    02F9: B9 04 00                              	mov cx, length		; result
+[ 271]    02FC: E8 CE 01                              	call copyArray
+[ 272]        :                                       	
+[ 273]    02FF: BE 4F 00                              	lea si, remainder
+[ 274]    0302: BF 7F 00                              	lea di, tmp4
+[ 275]    0305: BB 55 00                              		lea bx, result       	
+[ 276]    0308: E8 01 01                              	call subNumbersMul
+[ 277]        :                                       	
+[ 278]    030B: BE 55 00                              	lea si, result		; copy from
+[ 279]    030E: BF 4F 00                              	lea di, remainder	; copy to
+[ 280]    0311: B9 04 00                              	mov cx, length		; result
+[ 281]    0314: E8 B6 01                              	call copyArray        	
+[ 282]        :                                       	
+[ 283]    0317: 8A 16 5F 00                           	mov dl, dividendPointer ; dividend pointer
+[ 284]    031B: 80 FA 03                              	cmp dl, length - 1	; stop when the dividen pointer value reached the lengt of the dividend
+[ 285]    031E: FE 06 5F 00                           	inc dividendPointer
+[ 286]    0322: 73 03 E9 0B FF                        	jb updateRemainder     ; do another iteration
+[ 287]        :                                       		
+[ 288]    0327:                                       		divisionFinished:      	
+[ 289]        :                                       		
+[ 290]        :                                       		
+[ 291]        :                                       	; the is a bug in the division algorithm the quotient come 1 unit short every time
+[ 292]        :                                       		; instead of fixing the issue, we'll just add 1 to the quotient
+[ 293]    0327: BF 7A 00                              	lea di, tmp2 + length - 1	; setup array as number 1
+[ 294]    032A: C6 05 01                              	mov [di], 1               	; move 1 into units position
+[ 295]        :                                       	
+[ 296]    032D: BE 59 00                              lea si, quotient
+[ 297]    0330: BF 77 00                              	lea di, tmp2	; array representing number 1
+[ 298]    0333: BB 55 00                              	lea bx, result
+[ 299]    0336: E8 69 01                              	call addNumbers
+[ 300]        :                                       	
+[ 301]        :                                       	;lea si, quotient	; copy from result
+[ 302]        :                                       	;lea di, result		; copy to quotient
+[ 303]        :                                       	;mov cx, length		; result
+[ 304]        :                                       	;call copyArray
+[ 305]        :                                       	
+[ 306]    0339: C3                                    ret
+[ 307]        :                                       integerDivision endp
+[ 308]        :                                       
+[ 309]    033A:                                       mulDiv proc	
+[ 310]        :                                       	
+[ 311]        :                                       	; Multiplication is implemented by adding the same number a bunch of times
+[ 312]        :                                       	; 2 * 3, is done by adding the number 2, 3 times.
+[ 313]        :                                       	; 2 * 3 = ( ( ( 0 + 2 = 2 ) + 2 = 4 ) + 2 = 6 )
+[ 314]        :                                       	; The zero is the begining state of the result, when the additions are complete,
+[ 315]        :                                       	; the result variable already contains the value.
+[ 316]        :                                       	; The number of times the addition happens is the value of the second operand (passed in tmp3)
+[ 317]        :                                       	; on each iteration, we subtract that value by 1.
+[ 318]        :                                       	; We preform this while the second operand is different from zero
+[ 319]        :                                       	
+[ 320]        :                                       	; this is a destructive procedure. The second operand will be changed, and because of such,
+[ 321]        :                                       	; before the algorithm starts, the second operand will be copied to tmp5 and will use that instead.
+[ 322]        :                                       	
+[ 323]        :                                       	; tmp1 used to save the consecutive additions on each iteration
+[ 324]        :                                       	; tmp2 used to represent the number 1 to subtract the divisor on each iteration
+[ 325]        :                                       	; tmp3 contains the remainign additions left to complete the multiplication
+[ 326]        :                                       	; tmp5 second operand is copied into a discartable
+[ 327]        :                                       	
+[ 328]        :                                       	; backup second operand in tmp5 array
+[ 329]    033A: 8B 1E 63 00                           	mov bx, mem2		; reference mem2 (memory address of second operand)
+[ 330]    033E: 8D 37                                 	lea si, [bx]		; indirectly reference mem2 value
+[ 331]    0340: BF 83 00                              	lea di, tmp5		; copy second operand into discartable array
+[ 332]    0343: B9 04 00                              	mov cx, length
+[ 333]    0346: E8 84 01                              call copyArray		; copy from array in si to array in di
+[ 334]        :                                       	
+[ 335]    0349:                                       	additionCycleMulDiv:
+[ 336]        :                                       	     	 				
+[ 337]        :                                       		
+[ 338]        :                                       		; validate if we have any addition to preform , input di register		 		
+[ 339]    0349: BF 83 00                              		lea di, tmp5		; number of additions left to preform
+[ 340]    034C: E8 AA 00                              		call arrayIsZero	; validate
+[ 341]    034F: 83 FA 00                              		cmp dx, 0
+[ 342]    0352: 74 5B                                 		je mulCompleteMulDiv	; if zero, no addition remains. Exit the addition loop
+[ 343]        :                                       		
+[ 344]        :                                       		; load input variables into apropriate register
+[ 345]    0354: 8B 1E 61 00                           		mov bx, mem1		; reference mem1 (first operand array memory address)
+[ 346]    0358: 8D 37                                 		lea si, [bx]		; indirectly reference mem1 value     							
+[ 347]    035A: 8B 1E 65 00                           		mov bx, mem3		; reference mem3 (result variable array memory address)
+[ 348]    035E: 8D 1F                                 		lea bx, [bx]		; indirectly reference mem3 value		                                                                           	
+[ 349]        :                                       		
+[ 350]        :                                       		; Access the result from the previous iteration (in tmp1) and store it in the result. If it's the first iteration, tmp1 array is all zeros
+[ 351]    0360: BE 73 00                              		lea si, tmp1		; copy value from previous iteration
+[ 352]    0363: 8B 1E 65 00                           		mov bx, mem3		; into reference memory mem3 (result variable array memory address)
+[ 353]    0367: 8D 3F                                 		lea di, [bx]		; indirectly reference mem3
+[ 354]    0369: B9 04 00                              		mov cx, length
+[ 355]    036C: E8 5E 01                              		call copyArray		; execute copy
+[ 356]        :                                       
+[ 357]        :                                       		; preform one addition		
+[ 358]    036F: 8B 1E 61 00                           		mov bx, mem1		; reference mem1 (first operand array memory address)
+[ 359]    0373: 8D 37                                 		lea si, [bx]		; indirectly reference mem1 value
+[ 360]    0375: 8B 1E 65 00                           		mov bx, mem3		; reference mem3 (result variable array memory address)
+[ 361]    0379: 8D 3F                                 		lea di, [bx]		; indirectly reference mem3 value		
+[ 362]    037B: E8 24 01                              		call addNumbers		; execute addition
+[ 363]        :                                       		
+[ 364]        :                                       		; save result for the next iteration. Subtraction will override the result variable
+[ 365]    037E: 8B 1E 65 00                           		mov bx, mem3		; reference mem3 (result variable array memory address)
+[ 366]    0382: 8D 37                                 		lea si, [bx]
+[ 367]    0384: BF 73 00                              		lea di, tmp1		; save the result for next interation
+[ 368]    0387: B9 04 00                              		mov cx, length
+[ 369]    038A: E8 40 01                              		call copyArray		
+[ 370]        :                                       				
+[ 371]    038D: BE 83 00                              		lea si, tmp5		;
+[ 372]    0390: C6 06 7A 00 01                        		mov [tmp2 + length - 1], 1	; setup array representing number 1		
+[ 373]    0395: BF 77 00                              		lea di, tmp2		; load array memory address for subtraction	
+[ 374]    0398: 8B 1E 65 00                           		mov bx, mem3		; reference mem3 (result variable array memory address)
+[ 375]    039C: 8D 1F                                 		lea bx, [bx]
+[ 376]    039E: E8 6B 00                              		call subNumbersMul	; execute subtraction
+[ 377]        :                                       		
+[ 378]        :                                       		; subtraction saved the result in the result variable
+[ 379]        :                                       		; for the algorithm, the numberTwo itself needs to be
+[ 380]        :                                       		; the one decremented, so we're going to copy the value
+[ 381]        :                                       		; from result to numberTwo
+[ 382]        :                                       		
+[ 383]    03A1: BE 55 00                              		lea si, result		
+[ 384]    03A4: BF 83 00                              		lea di, tmp5
+[ 385]    03A7: B9 04 00                              		mov cx, length
+[ 386]    03AA: E8 20 01                              		call copyArray
+[ 387]        :                                       		
+[ 388]    03AD: EB 9A                                 		jmp additionCycleMulDiv	
+[ 389]        :                                       	
+[ 390]    03AF:                                       	mulCompleteMulDiv:
+[ 391]        :                                       	
+[ 392]    03AF: BE 73 00                              	lea si, tmp1
+[ 393]    03B2: 8B 1E 65 00                           	mov bx, mem3		
+[ 394]    03B6: 8D 3F                                 	lea di, [bx]
+[ 395]    03B8: B9 04 00                              	mov cx, length
+[ 396]    03BB: E8 0F 01                              	call copyArray
+[ 397]        :                                       	
+[ 398]        :                                       	; zero out accumulator array
+[ 399]    03BE: BE 73 00                              	lea si, tmp1
+[ 400]    03C1: E8 35 02                              	call zeroNumber
+[ 401]        :                                       	
+[ 402]        :                                       	; zero out subtraction tmp array
+[ 403]    03C4: BE 7A 00                              	lea si, tmp2 + length - 1
+[ 404]    03C7: C6 04 00                              	mov [si], 0	
+[ 405]        :                                       	
+[ 406]    03CA: C3                                    	ret
+[ 407]        :                                       mulDiv endp
+[ 408]        :                                       
+[ 409]    03CB:                                       mulSetup proc
+[ 410]        :                                       
+[ 411]    03CB: BE 47 00                              	lea si, numberOne
+[ 412]    03CE: 89 36 61 00                           	mov mem1, si
+[ 413]        :                                       	
+[ 414]    03D2: BF 4B 00                              	lea di, numberTwo
+[ 415]    03D5: 89 3E 63 00                           	mov mem2, di
+[ 416]        :                                       	
+[ 417]    03D9: BB 55 00                              	lea bx, result
+[ 418]    03DC: 89 1E 65 00                           	mov mem3, bx	   	
+[ 419]        :                                       	
+[ 420]    03E0: E8 57 FF                              	call mulDiv
+[ 421]        :                                       
+[ 422]    03E3: C3                                    	ret
+[ 423]        :                                       mulSetup endp
+[ 424]        :                                       
+[ 425]    03E4:                                       lengthOfNumber proc
+[ 426]        :                                       
+[ 427]        :                                       ; this procedure counts the number of significant digits in the array (does not count leading zeros)
+[ 428]        :                                       
+[ 429]        :                                       ; input: si points to the array
+[ 430]        :                                       ; output: dx will contains the number of digits of the number
+[ 431]        :                                       
+[ 432]    03E4: B9 00 00                              mov cx, 0
+[ 433]    03E7: B1 04                                 	mov cl, length
+[ 434]    03E9: BA 00 00                              	mov dx, 0
+[ 435]        :                                       	
+[ 436]    03EC:                                       	countDigitsOfNumber:
+[ 437]        :                                       	
+[ 438]    03EC: 80 3C 00                              		cmp [si], 0
+[ 439]    03EF: 75 03                                 		jne notLeadingZero
+[ 440]        :                                       	
+[ 441]    03F1: 46                                    	        inc si
+[ 442]        :                                       	
+[ 443]    03F2: E2 F8                                 		loop countDigitsOfNumber
+[ 444]        :                                       		
+[ 445]    03F4:                                       		notLeadingZero:
+[ 446]    03F4: B2 04                                 		mov dl, length
+[ 447]    03F6: 2A D1                                 		sub dl, cl
+[ 448]        :                                       		
+[ 449]    03F8: C3                                    	ret
+[ 450]        :                                       
+[ 451]        :                                       lengthOfNumber endp
+[ 452]        :                                       
+[ 453]    03F9:                                       arrayIsZero proc
+[ 454]        :                                       	; compares each digit to zero
+[ 455]        :                                       	; if every single one of them is zero, at the end
+[ 456]        :                                       	; dx will contain a 0, otherwise, dx will contain a 1
+[ 457]        :                                       	
+[ 458]        :                                       	; input data:
+[ 459]        :                                       	; di : points to the start of the number array
+[ 460]        :                                       	
+[ 461]        :                                       	; output data:   	
+[ 462]        :                                       	; dx : output ( 0 : array represents a zero number  |  1 : array represents a non-zero number )
+[ 463]        :                                       	
+[ 464]    03F9: BA 00 00                              	mov dx, 0
+[ 465]    03FC: B9 04 00                              	mov cx, length
+[ 466]        :                                       	
+[ 467]    03FF:                                       	validate:
+[ 468]    03FF: 80 3D 00                              		cmp [di], 0	; compare digit to zero
+[ 469]    0402: 75 04                                 		jne notZero	; if the digit in not a zero, exit the loop and mark the flag as 1 ( 1: array is a non-zero number)
+[ 470]        :                                       	
+[ 471]    0404: 47                                    	        inc di		; move to next digit
+[ 472]        :                                       		
+[ 473]    0405: E2 F8                                 		loop validate	
+[ 474]        :                                       	
+[ 475]    0407: C3                                    	ret
+[ 476]        :                                       		
+[ 477]    0408:                                       	notZero:
+[ 478]    0408: BA 01 00                              	mov dx, 1    	
+[ 479]    040B: C3                                    	ret
+[ 480]        :                                       arrayIsZero endp
+[ 481]        :                                       
+[ 482]    040C:                                       subNumbersMul proc
+[ 483]        :                                       						
+[ 484]    040C: F8                                    	clc		; Clear Carry Flag (cf = 0)
+[ 485]    040D: B8 00 00                              	mov ax, 0	; clear ax
+[ 486]        :                                       	
+[ 487]    0410: 83 C6 03                              	add si, length - 1	; put si in the memory address of the last element of the numerOne array
+[ 488]    0413: 83 C7 03                              	add di, length - 1	; put di in the memory address of the last element of the numerTwo array
+[ 489]    0416: 80 C3 03                              	add bl, length - 1	; put bx in the memory address of the last element of the result array	
+[ 490]        :                                       
+[ 491]    0419: B9 04 00                              	mov cx, length	
+[ 492]        :                                       		
+[ 493]    041C:                                       	subElementsMul:	
+[ 494]    041C: 8A 04                                 		mov al, [si]
+[ 495]    041E: 3A 05                                 		cmp al, [di]
+[ 496]    0420: 73 11                                 		jae subDontSetCarryMul
+[ 497]        :                                       			
+[ 498]    0422: 04 0A                                 		add al, 10	; minuend below subtrahend, so add the to the minuend ; you shit this add reset the carry flag. bugs out the sbb operations below		
+[ 499]        :                                       		
+[ 500]    0424:                                       		subSetCarryMul:	
+[ 501]    0424: 2A 05                                 		sub al, [di]			; subtract values and carry
+[ 502]    0426: 2A 06 60 00                           		sub al, anotherCarryFlag	; subtract the carry from the previous subtraction
+[ 503]    042A: C6 06 60 00 01                        		mov anotherCarryFlag, 1		; set carry flag for subtraction
+[ 504]    042F: 88 07                                 		mov [bx], al			; move the subtraction result to the corresponding element of the result array
+[ 505]    0431: EB 0D                                 		jmp subContinueMul
+[ 506]        :                                       		
+[ 507]    0433:                                       		subDontSetCarryMul:
+[ 508]    0433: 2A 05                                 		sub al, [di]			; move the subtraction result to the corresponding element of the result array
+[ 509]    0435: 2A 06 60 00                           		sub al, anotherCarryFlag	; subtract the carry from the previous subtraction
+[ 510]    0439: C6 06 60 00 00                        		mov anotherCarryFlag, 0		; clear carry flag for subtraction
+[ 511]    043E: 88 07                                 		mov [bx], al			; move the subtraction result to the corresponding element of the result array
+[ 512]        :                                       		
+[ 513]        :                                       		
+[ 514]    0440:                                       		subContinueMul:
+[ 515]    0440: 4E                                    		dec si		; move si pointer to the left element of the array (one order greater)
+[ 516]    0441: 4F                                    		dec di		; move di pointer to the left element of the array (one order greater)
+[ 517]    0442: 4B                                    		dec bx		; move bx pointer to the left element of the array (one order greater)
+[ 518]    0443: B0 00                                 		mov al, 0	; clear ax for following operations
+[ 519]        :                                       	
+[ 520]    0445: E2 D5                                 loop subElementsMul
+[ 521]        :                                       			       	
+[ 522]    0447: C3                                    	ret	
+[ 523]        :                                       subNumbersMul endp
+[ 524]        :                                       
+[ 525]    0448:                                       subNumbers proc
+[ 526]        :                                       	; TODO write some bs about how the algorithm requires a positive result
+[ 527]        :                                       	; TODO the minuend as to be greater or equal to the subtrahend explain that
+[ 528]        :                                       	; TODO yeah also describe the subtraction algorithm
+[ 529]        :                                       	
+[ 530]        :                                       	; How to deal with negative results.
+[ 531]        :                                       	; Subtraction is not a commutative operation, but there is a direct relation in the result if we swap the operands.
+[ 532]        :                                       	; If we swap the operands, the result is going to have the same absolute value, but the symmetric sign.
+[ 533]        :                                       	; The sign of the the result can be predicted by the order of the operands
+[ 534]        :                                       	; if the minuend is below the subtrahend, we're facing a negative result
+[ 535]        :                                       	; Knowing both this things, we will predict when the subtraction would result in a signed negative value and react accordingly
+[ 536]        :                                       	; If the result is negative, we will swap the operands resulting in a signed positive and set a flag to represent the result is unsigned negative
+[ 537]        :                                       	
+[ 538]    0448: BE 47 00                              	lea si, numberOne 	; put si in the memory address of the fist element of the numerOne array
+[ 539]    044B: BF 4B 00                              	lea di, numberTwo	; put di in the memory address of the fist element of the numerTwo array
+[ 540]        :                                       	
+[ 541]    044E: E8 92 00                              	call determineSubtractionSign	; signed subtraction is not suported. We will predict the sign of the result and if it's negative swap the operands
+[ 542]        :                                       	
+[ 543]    0451: 83 FB 00                              	cmp bx, 0
+[ 544]    0454: 74 10                                 	je skipOperandSwap
+[ 545]        :                                       	
+[ 546]        :                                       	; to not deal with a negative result, we will swap the operands and have a flag representing a negative result 	
+[ 547]    0456: 88 1E 5D 00                           	mov resultSign, bl	; set negative number flag
+[ 548]        :                                       	
+[ 549]    045A: B9 04 00                              	mov cx, length
+[ 550]    045D: BE 47 00                              	lea si, numberOne
+[ 551]    0460: BF 4B 00                              	lea di, numberTwo
+[ 552]        :                                       	
+[ 553]    0463: E8 70 00                              	call swapDigitsBetweenNumbers			
+[ 554]        :                                       		
+[ 555]    0466:                                       	skipOperandSwap:
+[ 556]    0466: F8                                    	clc		; Clear Carry Flag (cf = 0)
+[ 557]    0467: B8 00 00                              	mov ax, 0	; clear ax
+[ 558]        :                                       	
+[ 559]    046A: BE 4A 00                              	lea si, numberOne + length - 1	; put si in the memory address of the last element of the numerOne array
+[ 560]    046D: BF 4E 00                              	lea di, numberTwo + length - 1  ; put di in the memory address of the last element of the numerTwo array
+[ 561]    0470: BB 58 00                              	lea bx, result + length - 1	; put bx in the memory address of the last element of the result array	
+[ 562]        :                                       	
+[ 563]    0473: B9 04 00                              	mov cx, length	; loop should repeat for the size of the array
+[ 564]        :                                       	
+[ 565]    0476:                                       	subElements:		
+[ 566]        :                                       		; To deal with negative results on each iteration, we're going to avoid them alltogether.
+[ 567]        :                                       		; Negative results in subtraction happen when we subtract a digit by a larger one, so
+[ 568]        :                                       		; we're going to validate if the minuend digit is below the subtrahend digit and if so
+[ 569]        :                                       		; add 10 to the minuend value, set a carry flag for later and then preform the subtraction
+[ 570]        :                                       		; The carry flag will be subtracted to the minuend in the following iteration
+[ 571]        :                                       		
+[ 572]    0476: 8A 04                                 		mov al, [si]
+[ 573]    0478: 3A 05                                 		cmp al, [di]
+[ 574]    047A: 73 11                                 		jae subDontSetCarry
+[ 575]        :                                       		
+[ 576]    047C: 04 0A                                 		add al, 10	; minuend below subtrahend, so add the to the minuend ; you shit this add reset the carry flag. bugs out the sbb operations below		
+[ 577]        :                                       	
+[ 578]    047E:                                       		subSetCarry:	
+[ 579]    047E: 2A 05                                 		sub al, [di]			; subtract values and carry
+[ 580]    0480: 2A 06 60 00                           		sub al, anotherCarryFlag	; subtract the carry from the previous subtraction
+[ 581]    0484: C6 06 60 00 01                        		mov anotherCarryFlag, 1		; set carry flag for subtraction
+[ 582]    0489: 88 07                                 	        mov [bx], al			; move the subtraction result to the corresponding element of the result array
+[ 583]    048B: EB 0D                                 	        jmp subContinue
+[ 584]        :                                       	
+[ 585]    048D:                                       	        subDontSetCarry:
+[ 586]    048D: 2A 05                                 	        sub al, [di]			; move the subtraction result to the corresponding element of the result array
+[ 587]    048F: 2A 06 60 00                           	        sub al, anotherCarryFlag        ; subtract the carry from the previous subtraction
+[ 588]    0493: C6 06 60 00 00                        	        mov anotherCarryFlag, 0		; clear carry flag for subtraction
+[ 589]    0498: 88 07                                 	        mov [bx], al			; move the subtraction result to the corresponding element of the result array
+[ 590]        :                                       	
+[ 591]        :                                       	
+[ 592]    049A:                                       	        subContinue:
+[ 593]    049A: 4E                                    	        dec si		; move si pointer to the left element of the array (one order greater)
+[ 594]    049B: 4F                                    	        dec di  	; move di pointer to the left element of the array (one order greater)
+[ 595]    049C: 4B                                    	        dec bx  	; move bx pointer to the left element of the array (one order greater)
+[ 596]    049D: B0 00                                 	        mov al, 0	; clear ax for following operations
+[ 597]        :                                       	
+[ 598]    049F: E2 D5                                 		loop subElements			       	
+[ 599]    04A1: C3                                    	ret	
+[ 600]        :                                       subNumbers endp
+[ 601]        :                                       
+[ 602]    04A2:                                       addNumbers proc
+[ 603]        :                                       	
+[ 604]    04A2: F8                                    	clc		; Clear Carry Flag (cf = 0)
+[ 605]    04A3: B8 00 00                              	mov ax, 0	; clear ax
+[ 606]        :                                       	
+[ 607]    04A6: 83 C6 03                              	add si, length - 1		; put si in the memory address of the last element of the first array
+[ 608]    04A9: 83 C7 03                              	add di, length - 1  		; put di in the memory address of the last element of the second array
+[ 609]    04AC: BB 58 00                              	lea bx, result + length - 1	; put bx in the memory address of the last element of the result array	
+[ 610]        :                                       	
+[ 611]    04AF: B9 04 00                              	mov cx, length	; loop should repeat for the size of the array
+[ 612]        :                                       	
+[ 613]    04B2:                                       	addElements:
+[ 614]    04B2: 8A 04                                 		mov al, [si]	; add a digit of first number
+[ 615]    04B4: 12 05                                 		adc al, [di]    ; add a digit of first number
+[ 616]        :                                       	
+[ 617]    04B6: 3C 0A                                 	        cmp al, 10      ; check if the result is greater than or equal to 10
+[ 618]    04B8: 72 07                                 		jb no_carry     ; if not, skip carry adjustment
+[ 619]        :                                       		
+[ 620]    04BA:                                       		carry:	
+[ 621]    04BA: 2C 0A                                 		sub al, 10      ; adjust the result to fit in a single decimal digit
+[ 622]    04BC: F9                                    		stc             ; SeT Carry Flag (cf = 1)
+[ 623]    04BD: 88 07                                 	        mov [bx], al    ; move the sum to the corresponding element of the result array
+[ 624]    04BF: EB 03                                 	        jmp continue
+[ 625]        :                                       	
+[ 626]    04C1:                                       	        no_carry:
+[ 627]    04C1: F8                                    	        clc             ; Clear Carry Flag (cf = 0)
+[ 628]    04C2: 88 07                                 	        mov [bx], al    ; move the sum to the corresponding element of the result array
+[ 629]        :                                       	
+[ 630]    04C4:                                       	        continue:
+[ 631]    04C4: 4E                                    	        dec si		; move si pointer to the left element of the array (one order greater)
+[ 632]    04C5: 4F                                    	        dec di 		; move di pointer to the left element of the array (one order greater)
+[ 633]    04C6: 4B                                    	        dec bx  	; move bx pointer to the left element of the array (one order greater)
+[ 634]    04C7: B8 00 00                              	        mov ax, 0	; clear ax for following operations
+[ 635]        :                                       	
+[ 636]    04CA: E2 E6                                 		loop addElements
+[ 637]        :                                       	
+[ 638]    04CC: C3                                    	ret	
+[ 639]        :                                       addNumbers endp
+[ 640]        :                                       
+[ 641]    04CD:                                       copyArray proc
+[ 642]        :                                       
+[ 643]        :                                       	; si : array to copy values from
+[ 644]        :                                       	; di : array to copy values to	
+[ 645]        :                                       	; cx : length of the arrays
+[ 646]        :                                       	
+[ 647]    04CD:                                       	doCopy:
+[ 648]    04CD: 8A 04                                 		mov al, [si]
+[ 649]    04CF: 88 05                                 		mov [di], al
+[ 650]        :                                       		
+[ 651]    04D1: 46                                    		inc si
+[ 652]    04D2: 47                                    		inc di
+[ 653]        :                                       		
+[ 654]    04D3: E2 F8                                 		loop doCopy		
+[ 655]    04D5: C3                                    	ret
+[ 656]        :                                       copyArray endp
+[ 657]        :                                       
+[ 658]    04D6:                                       swapDigitsBetweenNumbers proc
+[ 659]        :                                       
+[ 660]        :                                       	; swap array specified by si and di register
+[ 661]        :                                       	; cx must contain the length of the arrays
+[ 662]        :                                       
+[ 663]    04D6:                                       	doSwap:
+[ 664]    04D6: 8A 04                                 		mov al, [si]
+[ 665]    04D8: 8A 1D                                 		mov bl, [di]
+[ 666]    04DA: 88 1C                                 		mov [si], bl
+[ 667]    04DC: 88 05                                 		mov [di], al
+[ 668]    04DE: 46                                    		inc si
+[ 669]    04DF: 47                                    		inc di
+[ 670]    04E0: E2 F4                                 		loop doSwap
+[ 671]        :                                       		
+[ 672]    04E2: C3                                    	ret		
+[ 673]        :                                       swapDigitsBetweenNumbers endp
+[ 674]        :                                       
+[ 675]    04E3:                                       determineSubtractionSign proc
+[ 676]        :                                       
+[ 677]    04E3: B8 00 00                              mov ax, 0		; zero register
+[ 678]    04E6: BB 00 00                              mov bx, 0		; bx contains the subtraction result sign (0 positive or zero result, 1 negative result)  	
+[ 679]        :                                       	
+[ 680]    04E9: B9 04 00                              mov cx, length		; preform the validation for each digit. The amount of digits in a number is specified by length
+[ 681]        :                                       
+[ 682]    04EC:                                       compareDigitsToValidateSubtraction:
+[ 683]        :                                       	; to validate if the number in si is above or equal to the number in di. Numbers are arrays of the same length.
+[ 684]        :                                       	; we're going to validate if each digit of number1 is above or equal to the corresponding magnitude digit of number2.
+[ 685]        :                                       	; When the validation fails, up to that point the number1 digits are either above or equal to the digits of number2,
+[ 686]        :                                       	; and on the moment the validation fails, the number2 is above of number1
+[ 687]        :                                       	; we will stop here and mark the flag (bx) as 1 (negative)
+[ 688]        :                                       	
+[ 689]        :                                       		; cmp [si], [di] error. CMP cannot take both operands to be memory references
+[ 690]        :                                       		
+[ 691]    04EC: 8A 05                                 		mov al, [di]
+[ 692]    04EE: 38 04                                 		cmp [si], al
+[ 693]    04F0: 77 06                                 		ja positiveResultDetected	; number1 digit must be above to the corresponding magnitude digit of number2 to result positive
+[ 694]        :                                       	 	
+[ 695]    04F2: 74 08                                 	 	je compareNextDigits            ; if digits are equal, the result will be determined through the remainding less significative digits
+[ 696]        :                                       	 	
+[ 697]    04F4:                                       		negativeResultDetected:
+[ 698]    04F4: BB 01 00                              		mov bx, 1	; validation flag contains subtraction result sign (0 positive result, 1 negative result)		 		 		
+[ 699]    04F7: C3                                    		ret		; no point continuing the validation for the remaining digits.
+[ 700]        :                                       		
+[ 701]    04F8:                                       		positiveResultDetected:
+[ 702]    04F8: BB 00 00                              		mov bx, 0	; validation flag contains subtraction result sign (0 positive result, 1 negative result)		 		 		
+[ 703]    04FB: C3                                    		ret		; no point continuing the validation for the remaining digits.
+[ 704]        :                                       		                      		
+[ 705]    04FC:                                       		compareNextDigits:
+[ 706]    04FC: 46                                    		inc si
+[ 707]    04FD: 47                                    		inc di
+[ 708]        :                                       		 		
+[ 709]    04FE: E2 EC                                 		loop compareDigitsToValidateSubtraction
+[ 710]        :                                       		
+[ 711]        :                                       		; if reached here, subtraction is results in zero
+[ 712]        :                                       		
+[ 713]    0500: BB 00 00                              		mov bx, 0
+[ 714]        :                                       		
+[ 715]    0503: C3                                    	ret
+[ 716]        :                                       determineSubtractionSign endp
+[ 717]        :                                       
+[ 718]    0504:                                       outputResult PROC	
+[ 719]        :                                       	
+[ 720]    0504: BA 2D 00                              	lea dx, resultPreText	; move output prefix text
+[ 721]    0507: B4 09                                 	mov ah, 09h	; load function to print out sting in DX
+[ 722]    0509: CD 21                                 	int 21h         ; execute 09h                                                           	
+[ 723]        :                                       	                    	
+[ 724]    050B: B9 04 00                              	mov cx, length	; do loop for every element of the array
+[ 725]    050E: BE 55 00                              	lea si, result  ; point into the beggining result array	
+[ 726]        :                                       	
+[ 727]    0511:                                       	outputSignValidation:
+[ 728]    0511: 80 3E 5D 00 01                        	cmp resultSign, 1	; (0 = positive number, 1 = negative number)
+[ 729]    0516: 75 03                                 	jne outputDigit
+[ 730]        :                                       	
+[ 731]    0518: E8 03 01                              	call outputMinusChar	
+[ 732]        :                                       	
+[ 733]    051B:                                       	outputDigit:
+[ 734]        :                                       		; the next line is moving a value into dh. why the fuck why? does si point to a dw var? I can't be bothered to check right now. Future you, do that
+[ 735]    051B: 8B 14                                 	    	mov dx, [si]	; Move digit from result into dx for processing
+[ 736]    051D: 80 FA 00                              	    	cmp dl, 0	; Compare the digit with zero
+[ 737]    0520: 74 05                                 	    	je checkZero	; If zero, check if it can be ignored as a leading zero
+[ 738]        :                                       	    	
+[ 739]    0522: BB 01 00                              	    	mov bx, 1	; Found a non-zero digit, enable leading zero flag
+[ 740]    0525: EB 05                                 	    	jmp printDigit	; Jump to printing the digit
+[ 741]        :                                       	
+[ 742]    0527:                                       	checkZero:
+[ 743]    0527: 83 FB 01                              	    	cmp bx, 1	; Check if the leading zero flag is enabled
+[ 744]    052A: 75 07                                 	    	jne skipDigit	; If not enabled, skip this zero
+[ 745]        :                                       	
+[ 746]    052C:                                       	printDigit:
+[ 747]    052C: 83 C2 30                              	    	add dx, 48	; Convert number into ASCII character
+[ 748]    052F: B4 02                                 	    	mov ah, 02h	; Load function to print out digit in DX
+[ 749]    0531: CD 21                                 	    	int 21h		; Execute
+[ 750]        :                                       	
+[ 751]    0533:                                       	skipDigit:
+[ 752]    0533: 46                                    	    	inc si		; Move to the next digit
+[ 753]    0534: E2 E5                                 	    	loop outputDigit; Repeat for the next digit
+[ 754]        :                                       	
+[ 755]    0536: C3                                    	ret
+[ 756]        :                                       outputResult ENDP
+[ 757]        :                                       
+[ 758]        :                                       
+[ 759]    0537:                                       readNumberInput PROC	; note: input does not work via numpad. normal 0 -> 9 in keyboard (ascii 48 -> 57)
+[ 760]        :                                       	
+[ 761]        :                                       	; a promt will be displayed asking the user to insert a number
+[ 762]        :                                       	; the number will be stored in an arbitrary array
+[ 763]        :                                       	;
+[ 764]        :                                       	; the prompt is defined by the address in the DX register, should be of the first index of the string
+[ 765]        :                                       	; the array is defined by the address in the SI register, should be of the address of the first index in the array
+[ 766]        :                                       	
+[ 767]        :                                       	
+[ 768]        :                                       	; DX already contains the promt address (or atleast it should be idk)
+[ 769]    0537: B4 09                                 	mov ah, 09h	; load function to print out sting in DX
+[ 770]    0539: CD 21                                 	int 21h		; execute 09h
+[ 771]        :                                       	
+[ 772]    053B: B9 04 00                              	mov cx, length	; max digits in the number	         		
+[ 773]        :                                       	
+[ 774]    053E:                                       	readingDigit:
+[ 775]    053E: B4 01                                 		mov ah, 01h	; read keyboard character function, input in AL
+[ 776]    0540: CD 21                                 		int 21h
+[ 777]        :                                       		
+[ 778]    0542: 3C 08                                 		cmp al, 8	; compare to backspace key, if so remove last digit inputed
+[ 779]    0544: 74 21                                 		je is_backspace
+[ 780]        :                                       		
+[ 781]    0546: 3C 0D                                 		cmp al, 13	; compare to enter key, if so number is complete and move on
+[ 782]    0548: 75 03 E9 81 00                        		je inputIsFinished
+[ 783]        :                                       	
+[ 784]    054D: 3C 2B                                 	        cmp al, 43	; + addition operation
+[ 785]    054F: 74 27                                 	        je set_sum_operation
+[ 786]        :                                       	
+[ 787]    0551: 3C 2D                                 	        cmp al, 45	; - subtraction operation
+[ 788]    0553: 74 31                                 	        je set_sub_operation
+[ 789]        :                                       	
+[ 790]    0555: 3C 2A                                 	        cmp al, 42	; * addition operation
+[ 791]    0557: 74 3B                                 	        je set_mul_operation
+[ 792]        :                                       	
+[ 793]    0559: 3C 2F                                 	        cmp al, 47	; / addition operation
+[ 794]    055B: 74 45                                 	        je set_div_operation
+[ 795]        :                                       	
+[ 796]    055D: 3C 30                                 	   	cmp al, 48	; validate if ascii code is lower than {ascci code 48, decimal 0}, if so, not a valid number, ask digit again
+[ 797]    055F: 7C 4F                                 	   	jl not_a_number
+[ 798]        :                                       	   	
+[ 799]    0561: 3C 39                                 	   	cmp al, 57	; validate if ascii code is higher than {ascci code 57, decimal 9}, if so, not a valid number, ask digit again
+[ 800]    0563: 7F 4B                                 	   	jg not_a_number
+[ 801]        :                                       	   	
+[ 802]        :                                       	   	; if reached here, input is a valid number
+[ 803]    0565: EB 59                                 	   	jmp is_a_validNumber
+[ 804]        :                                       	   		
+[ 805]    0567:                                       		is_backspace:	  		
+[ 806]    0567: 83 F9 04                              	   		cmp cx, length	; validate edge case if no number has been inputed yet
+[ 807]    056A: 74 07                                 	  		je invalidBackspace     			
+[ 808]        :                                       			
+[ 809]    056C: E8 A7 00                              	  		call deleteCurrentCharacter
+[ 810]    056F: 58                                    			pop ax	; remove the digit from the stack	  		      	  	
+[ 811]        :                                       	  		; loop changed to  jmp.
+[ 812]    0570: 41                                    	  		inc cx	; allow for another loop iteration
+[ 813]        :                                       	  		 	
+[ 814]    0571: EB CB                                 	   		jmp readingDigit	   		
+[ 815]        :                                       	   	
+[ 816]    0573:                                       	   	invalidBackspace:
+[ 817]    0573: E8 B0 00                              	 	  	call correctInvalidBackspace
+[ 818]    0576: EB C6                                 	   		jmp readingDigit
+[ 819]        :                                       	   	
+[ 820]    0578:                                       	   	set_sum_operation:
+[ 821]    0578: 80 3E 54 00 00                        	   		cmp operation, 0
+[ 822]    057D: 75 4F                                 	   		jne  inputIsFinished	; operation has already been set.
+[ 823]        :                                       	   		
+[ 824]    057F: C6 06 54 00 2B                        	   		mov operation, '+'
+[ 825]        :                                       	   		
+[ 826]    0584: EB 48                                 	   		jmp inputIsFinished
+[ 827]        :                                       	   		
+[ 828]    0586:                                       	   	set_sub_operation:
+[ 829]    0586: 80 3E 54 00 00                        	   		cmp operation, 0
+[ 830]    058B: 75 41                                 	   		jne  inputIsFinished	; operation has already been set.
+[ 831]        :                                       	   		
+[ 832]    058D: C6 06 54 00 2D                        	   		mov operation, '-'
+[ 833]        :                                       	   		
+[ 834]    0592: EB 3A                                 	   		jmp inputIsFinished
+[ 835]        :                                       	   		
+[ 836]    0594:                                       	   	set_mul_operation:
+[ 837]    0594: 80 3E 54 00 00                        	   		cmp operation, 0
+[ 838]    0599: 75 33                                 	   		jne  inputIsFinished	; operation has already been set.
+[ 839]        :                                       	   		
+[ 840]    059B: C6 06 54 00 2A                        	   		mov operation, '*'
+[ 841]        :                                       	   		
+[ 842]    05A0: EB 2C                                 	   		jmp inputIsFinished
+[ 843]        :                                       	   		
+[ 844]    05A2:                                       	   	set_div_operation:
+[ 845]    05A2: 80 3E 54 00 00                        	   		cmp operation, 0
+[ 846]    05A7: 75 25                                 	   		jne  inputIsFinished	; operation has already been set.
+[ 847]        :                                       	   		
+[ 848]    05A9: C6 06 54 00 2F                        	   		mov operation, '/'
+[ 849]        :                                       	   		
+[ 850]    05AE: EB 1E                                 	   		jmp inputIsFinished
+[ 851]        :                                       	   		   	
+[ 852]    05B0:                                       	        not_a_number:
+[ 853]        :                                       			; you morom can't even put a valid input shame grow a tumor shame shame shame
+[ 854]    05B0: E8 5B 00                              			call putABackspaceInTheConsoleAndDeleteThePreviousCharacter
+[ 855]    05B3: EB 89                                 			jmp readingDigit	; since you put a wrong characer, you now get to do it again dumb f
+[ 856]        :                                       	
+[ 857]    05B5:                                       	        numberIsOfmaxSize:
+[ 858]        :                                       	 		; since the number is max size no more digits can be added to it. Only a operator
+[ 859]    05B5: E8 56 00                              	 		call putABackspaceInTheConsoleAndDeleteThePreviousCharacter
+[ 860]    05B8: EB 84                                 	 		jmp readingDigit
+[ 861]        :                                       	 		
+[ 862]    05BA:                                       	 	deletePrev:
+[ 863]        :                                       	 		; since the number is max size no more digits can be added to it. Only a operator
+[ 864]    05BA: E8 51 00                              	 		call putABackspaceInTheConsoleAndDeleteThePreviousCharacter
+[ 865]    05BD: E9 7E FF                              	 		jmp readingDigit
+[ 866]        :                                       	
+[ 867]    05C0:                                       	        is_a_validNumber:
+[ 868]        :                                       	        	; you're still a shameful moron
+[ 869]        :                                       	        	; convert from the ascii to a usable number
+[ 870]    05C0: B4 00                                 	        	mov ah, 0	; ah is not used, zero out
+[ 871]    05C2: 2C 30                                 	        	sub al, '0'     ; convert ascii code into decimal number
+[ 872]        :                                       	        	
+[ 873]    05C4: 83 F9 00                              	        	cmp cx, 0	; limit characters to pre-defined limit
+[ 874]    05C7: 74 F1                                 	        	je deletePrev
+[ 875]        :                                       	        	
+[ 876]        :                                       	        	; todo validate divisor. Must not be zero.  You can use the arrayIsZero procedure after the input has been completed
+[ 877]        :                                       	        	
+[ 878]        :                                       	        	; digits will be pushed into the stack on their correct order of magnitude
+[ 879]        :                                       	        	; they will later on, the popped out and inserted right to left (least significative to most significative)
+[ 880]        :                                       	        	; doing this to avoid this routine rightShiftUntilTheUnitDigitOfTheInputIsInTheCorrespondingUnitPositionInTheNumberArray:
+[ 881]    05C9: 50                                    	        	push ax			; push digit into stack
+[ 882]    05CA: 49                                    	        	dec cx
+[ 883]    05CB: E9 70 FF                              	   		jmp readingDigit	; ask for the next digit
+[ 884]        :                                       	   			   	
+[ 885]    05CE:                                       		inputIsFinished:
+[ 886]    05CE: 83 F9 04                              		cmp cx, length		; number cannot be empty
+[ 887]    05D1: 75 03 E9 68 FF                        		je readingDigit
+[ 888]        :                                       	
+[ 889]        :                                       	
+[ 890]        :                                       	
+[ 891]    05D6:                                       	popIntoNumberArray:	
+[ 892]        :                                       	
+[ 893]        :                                       	; mov si pointer into the last index of the array
+[ 894]    05D6: 83 C6 04                              	add si, length	; add the lenght, will excede the array by one, since arrays are zero based
+[ 895]    05D9: 83 EE 01                              	sub si, 1	; go back one
+[ 896]        :                                       	
+[ 897]        :                                       	; calculate the number of digits inserted
+[ 898]    05DC: B8 04 00                              	mov ax, length		; start with max amount of digits
+[ 899]    05DF: 2B C1                                 	sub ax, cx		; subtract number of digits left unsused (remaining value in cx is the number of iterations left when the loop to read digits was cut short)
+[ 900]    05E1: 8B C8                                 	mov cx, ax		; override the value of cx
+[ 901]        :                                       	
+[ 902]    05E3:                                       	popIntoDigitIntoArray:	; pop the digits of the number into the array                     	
+[ 903]    05E3: 58                                    		pop ax		; pop digit		
+[ 904]    05E4: 88 04                                 		mov [si], al    ; move digit into corresponding array position
+[ 905]    05E6: 4E                                    		dec si          ; decrease array index
+[ 906]    05E7: E2 FA                                 	        loop popIntoDigitIntoArray	; complete iterations to pop the remainding digits of the number into the array	
+[ 907]        :                                       					 		
+[ 908]    05E9: E8 1A 00                              	call putanewlineintheconsole    ; newline int the console
+[ 909]    05EC: B8 00 00                              	mov ax, 0
+[ 910]    05EF: BA 00 00                              	mov dx, 0
+[ 911]    05F2: BE 00 00                              	mov si, 0
+[ 912]    05F5: BF 00 00                              	mov di, 0
+[ 913]        :                                       			
+[ 914]    05F8: C3                                    	ret
+[ 915]        :                                       readNumberInput ENDP
+[ 916]        :                                       
+[ 917]    05F9:                                       zeroNumber proc
+[ 918]        :                                       	
+[ 919]        :                                       	; input: number to reset is defined by the addresss in si
+[ 920]        :                                       	; after function: si register points to the start of the array
+[ 921]        :                                       	
+[ 922]    05F9: B9 04 00                              	mov cx, length
+[ 923]        :                                       	
+[ 924]        :                                       	; si points to the biggining of the array
+[ 925]        :                                       	
+[ 926]    05FC:                                       	zeroDigit:
+[ 927]    05FC: C6 04 00                              		mov [si], 0
+[ 928]    05FF: 46                                    		inc si
+[ 929]    0600: E2 FA                                 		loop zeroDigit
+[ 930]        :                                       	
+[ 931]        :                                       	; WARNING: do not add -1 to length. The previous loop makes si overflow the array by one position
+[ 932]        :                                       	; and therefore, subtracting si by length returns to the first element of the array
+[ 933]    0602: 83 EE 04                              	sub si, length	
+[ 934]        :                                       			
+[ 935]    0605: C3                                    	ret
+[ 936]        :                                       zeroNumber endp
+[ 937]        :                                       
+[ 938]    0606:                                       putANewLineInTheConsole proc
+[ 939]        :                                       	
+[ 940]    0606: BA 39 00                              	lea dx, newline	; carriage return and line feed make up a newline.
+[ 941]    0609: B4 09                                 	mov ah, 09h
+[ 942]    060B: CD 21                                 	int 21h
+[ 943]        :                                       	
+[ 944]    060D: C3                                    	ret	
+[ 945]        :                                       putANewLineInTheConsole endp
+[ 946]        :                                       
+[ 947]    060E:                                       putABackspaceInTheConsoleAndDeleteThePreviousCharacter proc
+[ 948]        :                                       	; meant to be used for data validation, when user does not press backspace key
+[ 949]    060E: BA 3C 00                              	lea dx, backspace_string	
+[ 950]    0611: B4 09                                 	mov ah, 09h
+[ 951]    0613: CD 21                                 	int 21h	
+[ 952]        :                                       	
+[ 953]    0615: C3                                    	ret	
+[ 954]        :                                       putABackspaceInTheConsoleAndDeleteThePreviousCharacter endp
+[ 955]        :                                       
+[ 956]    0616:                                       deleteCurrentCharacter proc
+[ 957]        :                                       	; meant to be used when user inserts a backspace
+[ 958]    0616: BA 40 00                              	lea dx, removeCurrentCharacter
+[ 959]    0619: B4 09                                 	mov ah, 09h
+[ 960]    061B: CD 21                                 	int 21h	
+[ 961]        :                                       	
+[ 962]    061D: C3                                    	ret	
+[ 963]        :                                       deleteCurrentCharacter endp
+[ 964]        :                                       
+[ 965]    061E:                                       outputMinusChar proc
+[ 966]        :                                       	
+[ 967]    061E: BA 45 00                              	lea dx, negativeResultString
+[ 968]    0621: B4 09                                 	mov ah, 09h
+[ 969]    0623: CD 21                                 	int 21h	
+[ 970]        :                                       	
+[ 971]    0625: C3                                    	ret	
+[ 972]        :                                       outputMinusChar endp
+[ 973]        :                                       
+[ 974]    0626:                                       correctInvalidBackspace proc
+[ 975]        :                                       	
+[ 976]    0626: BA 43 00                              	lea dx, addSpace
+[ 977]    0629: B4 09                                 	mov ah, 09h
+[ 978]    062B: CD 21                                 	int 21h	
+[ 979]        :                                       	
+[ 980]    062D: C3                                    	ret	
+[ 981]        :                                       correctInvalidBackspace endp
+[ 982]        :                                       
+[ 983]    062E:                                       config proc	
+[ 984]    062E: B8 10 00                              	mov ax, @data	; load data segment
+[ 985]    0631: 8E D8                                 	mov ds, ax      ; load data segment
+[ 986]        :                                       	
+[ 987]        :                                       	;mov ax, stack_segment	; load stack segment
+[ 988]        :                                       	;mov ss, ax             ; load stack segment
+[ 989]        :                                       	;mov sp, 0xFFFE  ; Set stack pointer to the top of the stack
+[ 990]        :                                       
+[ 991]        :                                       	
+[ 992]    0633: B8 03 00                              	mov ax, 03h	; set video mode configuration 3
+[ 993]    0636: CD 10                                 	int 10h
+[ 994]    0638: B8 00 00                              	mov ax, 0	; zero ax register to not messup later (idk if it even can)
+[ 995]        :                                       	
+[ 996]    063B: C3                                    	ret
+[ 997]        :                                       config endp
+[ 998]        :                                       
+[ 999]    063C:                                       exitProgram proc	
+[1000]    063C: B8 00 4C                              	mov ax, 4c00h   ; exit program
+[1001]    063F: CD 21                                 	int 21h
+[1002]        :                                       		
+[1003]    0641: C3                                    	ret	
+[1004]        :                                       exitProgram endp	
+[1005]        :                                       
+[1006]        :                                       	
+[1007]        :                                       END	
+[1008]        :                                       
+ 
+===================================================================================================
+ 
+EXE HEADER - bytes from 0000 to 01FF inclusive.
+
+0000: 4D      -   exe signature (M)
+0001: 5A      -   exe signature (Z)
+0002: 42      -   bytes on last page (l.byte)
+0003: 00      -   bytes on last page (h.byte)
+0004: 05      -   512 byte pages in file (l.byte)
+0005: 00      -   512 byte pages in file (h.byte)
+0006: 01      -   relocations (l.byte)
+0007: 00      -   relocations (h.byte)
+0008: 20      -   paragraphs in header (l.byte)
+0009: 00      -   paragraphs in header (h.byte)
+000A: 00      -   minimum memory (l.byte)
+000B: 00      -   minimum memory (h.byte)
+000C: FF      -   maximum memory (l.byte)
+000D: FF      -   maximum memory (h.byte)
+000E: 00      -   SS - stack segment (l.byte)
+000F: 00      -   SS - stack segment (h.byte)
+0010: 00      -   SP - stack pointer (l.byte)
+0011: 01      -   SP - stack pointer (h.byte)
+0012: 4A      -   check sum (l.byte)
+0013: 37      -   check sum (h.byte)
+0014: 00      -   IP - instruction pointer (l.byte)
+0015: 00      -   IP - instruction pointer (h.byte)
+0016: 1A      -   CS - code segment (l.byte)
+0017: 00      -   CS - code segment (h.byte)
+0018: 1E      -   relocation table adress (l.byte)
+0019: 00      -   relocation table adress (h.byte)
+001A: 00      -   overlay number (l.byte)
+001B: 00      -   overlay number (h.byte)
+001C: 01      -   signature (l.byte)
+001D: 00      -   signature (h.byte)
+001E: 8F      -   relocation table - offset inside segment (l.byte)
+001F: 04      -   relocation table - offset inside segment (h.byte)
+0020: 1A      -   relocation table - segment anchor (l.byte)
+0021: 00      -   relocation table - segment anchor (h.byte)
+0022 to 01FF  -   reserved relocation area  (00) 
+
+
+
+
+===================================================================================================

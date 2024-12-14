@@ -3,10 +3,11 @@
 
 .stack 256
 
-.DATA
-	inputOneMessage db 'Insert first number: $'
-	inputTwoMessage db 'Insert second number: $'
-	resultPreText db 'result is: $'
+.DATA   
+	inputPromt db 'Insert math expression: $'
+	; deprecated inputOneMessage db 'Insert first number: $'
+	; deprecated inputTwoMessage db 'Insert second number: $'
+	resultPreText db ' = $'
 	newline db 13, 10, '$'			; Carriage Return and Line Feed make up a newline.
         backspace_string db 8, ' ', 8, '$'	; meant to be used for data validation, when user does not press the backspace key
         removeCurrentCharacter db ' ', 8, '$'   ; meant to be used when user presses the backspace key
@@ -32,14 +33,14 @@
 	anotherCarryFlag db 0	; only god and fuck knows what this is for... prolly subtraction
 	
 	mem1 dw 0		; reserved to reference operand 1 array memory address
-	mem2 dw 0 		; reserved to reference operand 2 array memory address
-	mem3 dw 0       	; reserved to reference result array memory address
-	mem4 dw 0       	; available
-	mem5 dw 0       	; available 
-	mem6 dw 0       	; available 
-	mem7 dw 0       	; available 
-	mem8 dw 0       	; available 
-	mem9 dw 0       	; available 
+	mem2 dw 0		; reserved to reference operand 2 array memory address
+	mem3 dw 0		; reserved to reference result array memory address
+	mem4 dw 0		; available
+	mem5 dw 0		; available 
+	mem6 dw 0		; available 
+	mem7 dw 0		; available 
+	mem8 dw 0		; available 
+	mem9 dw 0		; available 
 	tmp1 db length dup(0)	; reserved for mulDiv, carries the result between iterations 
 	tmp2 db length dup(0)	; reserved for mulDiv, used to subtract the second operand in each iteration
 	tmp3 db length dup(0)	; reserved for mulDiv, used to determine the greatest coeficient of divisor (that's it's mutiplication by divisor is lower than the remainder)
@@ -58,20 +59,26 @@ MAIN PROC
  	call config	; initial configurations 	
         
         mainCycle:
-        	lea dx, inputOneMessage	; load address of number1 prompt message for input prodecure
+		lea dx, inputPromt	; load address of number1 prompt message for input prodecure   
+		mov ah, 09h		; load function to print out sting in DX
+		int 21h			; execute 09h
+	
         	lea si, numberOne	; load address of number1 array for input prodecure
         	call zeroNumber		; zero every digit of the array        
-        	call readNumberInput	; read input of first number           
-        
-        	lea dx, inputTwoMessage	; load address of number2 prompt message for input prodecure
+        	call readNumberInput	; read input of first number                                               
+                    
         	lea si, numberTwo       ; load address of number2 array for input prodecure     
         	call zeroNumber		; zero every digit of the array
         	call readNumberInput	; read input of second number      
         	
-        	call preformOperation	; maps te value in operation to the corresponding procedure
+        	call preformOperation	; maps te value in operation to the corresponding procedure      
+        	
+        	; call putanewlineintheconsole    ; does what the procedure name says    
         	
         	call outputResult       ; prints the result to the console
          	                                  
+         	call putANewLineInTheConsole	; does what the procedure name says
+         	call putANewLineInTheConsole	; does what the procedure name says
          	call putANewLineInTheConsole	; does what the procedure name says
          	         	                            
 		; reset variables, the code flow requires these variables to be 0 at the begining of each operation
@@ -86,9 +93,7 @@ MAIN PROC
          	mov coeficient, 0       ; zero division quotient
          	mov dividendPointer, 0
          	
-        	jmp mainCycle		; repeat
-        
-        call exitProgram	; exit program
+        	jmp mainCycle		; repeat                                               
         
 MAIN ENDP
 
@@ -163,6 +168,10 @@ integerDivision proc
 		je determineDivisorCoeficient
 		; EIII WATCH OUT: what will happen if the divisor is greater than the dividen? I guess this code will go apeshit. Come back to this... eventually       
 		; maybe just validate if the division if above or equal to the divison, else quocient is 0?
+		
+		mov dl, dividendPointer ; dividend pointer
+        	cmp dl, length - 1	; stop when the dividen pointer value reached the lenght of the dividend
+		je determineDivisorCoeficient
 		     		   
 		inc dividendPointer
 		jmp updateRemainder		           
@@ -291,18 +300,18 @@ integerDivision proc
   		
         	; the is a bug in the division algorithm the quotient come 1 unit short every time
 		; instead of fixing the issue, we'll just add 1 to the quotient
-         	lea di, tmp2 + length - 1	; setup array as number 1
-         	mov [di], 1               	; move 1 into units position
+         	; lea di, tmp2 + length - 1	; setup array as number 1
+         	; mov [di], 1               	; move 1 into units position
          	
-                lea si, quotient
-        	lea di, tmp2	; array representing number 1
-        	lea bx, result
-        	call addNumbers
+                ; lea si, quotient
+        	; lea di, tmp2	; array representing number 1
+        	; lea bx, result
+        	; call addNumbers
         	
-        	;lea si, quotient	; copy from result
-        	;lea di, result		; copy to quotient
-        	;mov cx, length		; result
-        	;call copyArray
+        	lea si, quotient	; copy from result
+        	lea di, result		; copy to quotient
+        	mov cx, length		; result
+        	call copyArray
         	
         ret
 integerDivision endp
@@ -711,7 +720,7 @@ determineSubtractionSign proc
    		
    		; if reached here, subtraction is results in zero
    		
-   		mov bx, 0
+   		mov bx, 1
    		
 	ret
 determineSubtractionSign endp             
@@ -757,24 +766,20 @@ outputResult PROC
 outputResult ENDP
 
            
-readNumberInput PROC	; note: input does not work via numpad. normal 0 -> 9 in keyboard (ascii 48 -> 57)
-	
-	; a promt will be displayed asking the user to insert a number 
+readNumberInput PROC
+	                                                                
 	; the number will be stored in an arbitrary array
-	;
-	; the prompt is defined by the address in the DX register, should be of the first index of the string
-	; the array is defined by the address in the SI register, should be of the address of the first index in the array
-	   
-	    
-	; DX already contains the promt address (or atleast it should be idk)
-	mov ah, 09h	; load function to print out sting in DX
-	int 21h		; execute 09h                                                           
+
+	; the array is defined by the address in the SI register, should be of the address of the first index in the array	   	    	                                                        
 	     
 	mov cx, length	; max digits in the number	         		
 	
 	readingDigit:
 		mov ah, 01h	; read keyboard character function, input in AL
 		int 21h
+		
+		cmp al, 27	; escape key, exit program
+		je exitProgram
 		
 		cmp al, 8	; compare to backspace key, if so remove last digit inputed 
 		je is_backspace
@@ -905,8 +910,7 @@ readNumberInput PROC	; note: input does not work via numpad. normal 0 -> 9 in ke
 		mov [si], al    ; move digit into corresponding array position
 		dec si          ; decrease array index
 	        loop popIntoDigitIntoArray	; complete iterations to pop the remainding digits of the number into the array	
-					 		
-	call putanewlineintheconsole    ; newline int the console
+					 			
 	mov ax, 0
 	mov dx, 0
 	mov si, 0
