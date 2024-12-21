@@ -3,55 +3,69 @@
 
 .stack 256
 
-.DATA   
-	inputPromt db 'Insert math expression: $'
-	; deprecated inputOneMessage db 'Insert first number: $'
-	; deprecated inputTwoMessage db 'Insert second number: $'
-	resultPreText db ' = $'
+.DATA                                                                                                          
+	; text data
+	inputPromt db 'input: $'		
+ 	resultPreText db ' = $'                   
 	newline db 13, 10, '$'			; Carriage Return and Line Feed make up a newline.
         backspace_string db 8, ' ', 8, '$'	; meant to be used for data validation, when user does not press the backspace key
         removeCurrentCharacter db ' ', 8, '$'   ; meant to be used when user presses the backspace key
         addSpace db 32, '$'			; prints a space ' '     
         negativeResultString db 45, '$'         ; prints a minus '-'
-                                                   
-	length equ 4			; define constant with the length of the numbers
+             
+                               
+	; data for result output       
+	result db length dup(0)		; output result array 
+	resultSign db 0			; represents the sign of the result of an operation with unsigned numbers                               
+        mem3 dw 0		; reserved to reference result array memory address
+           
+           
+	; main variables
+	; length should be an even number                                                           
+	length equ 8			; define constant with the length of the numbers
 	lengthTimesTwo equ length * 2	; for the multiplication result. The maximum size of the result will be the sum of the length of both operands (operands are of the same size, and therefore time 2)		                                          
 	numberOne db length dup(0)	; input number 1 array
 	numberTwo db length dup(0)	; input number 2 array
-		 
-	remainder db length dup(0)	; input number 2 array
-	coeficient db 0			; references the coeficient in the divisor algorithm
-	
+	mem1 dw 0			; reserved to reference operand 1 array memory address
+	mem2 dw 0			; reserved to reference operand 2 array memory address
 	operation db 0			; specifies the operation between the numbers (+, - , /, v (v -> sqrt, only uses one number))
-	
-	result db length dup(0)		; output result array 
-	quotient db length dup(0)	; ouput quotient
-	resultSign db 0			; represents the sign of the result of an operation with unsigned numbers
-	
-	anotherCounter db 0	; used for multiplication algorithm
-	dividendPointer db 0	
-	anotherCarryFlag db 0	; only god and fuck knows what this is for... prolly subtraction
-	
-	mem1 dw 0		; reserved to reference operand 1 array memory address
-	mem2 dw 0		; reserved to reference operand 2 array memory address
-	mem3 dw 0		; reserved to reference result array memory address
-	mem4 dw 0		; available
-	mem5 dw 0		; available 
-	mem6 dw 0		; available 
-	mem7 dw 0		; available 
-	mem8 dw 0		; available 
-	mem9 dw 0		; available 
+	                                                                  
+	                                                                  
+	; variable for subtraction
+	anotherCarryFlag db 0		; used in subtraction to define a carry value between iterations
+			                                                                  
+	    
+	; variables for multiplication	                                                                                           
+	anotherCounter db 0	; used for multiplication algorithm	
 	tmp1 db length dup(0)	; reserved for mulDiv, carries the result between iterations 
 	tmp2 db length dup(0)	; reserved for mulDiv, used to subtract the second operand in each iteration
 	tmp3 db length dup(0)	; reserved for mulDiv, used to determine the greatest coeficient of divisor (that's it's mutiplication by divisor is lower than the remainder)
-	tmp4 db length dup(0)	; 
 	tmp5 db length dup(0)	; reserved for mulDiv, used to copy the second operand into a discartable array
+	 
+	 
+	; varaibles for division	 
+	remainder db length dup(0)	; input number 2 array
+	coeficient db 0			; references the coeficient in the divisor algorithm
+	quotient db length dup(0)	; ouput quotient
+	dividendPointer db 0	
 	tmp6 db length dup(0)	; reserved for integerDivision, used to copy the coeficient into a discartable array
 	tmp7 db length dup(0)	; reserved for integerDivision, used to copy the second operand into a discartable array
-	tmp8 db length dup(0)	; available auxiliary number array 
-	tmp9 db length dup(0)	; available auxiliary number array
+	tmp4 db length dup(0)	; reserved for integerDivision, used to copy the result value to be then used as param for subtraction
 	
+	; variables for sqrt
+	root db length dup(0)
+	rootPointer db 0
+	rootCoeficient db 0
+	aux db length dup(0)
+	tmp8 db length dup(0)	; reserved for sqrt, contains the base value for each iteration 			
+	tmp9 db length dup(0)	; reserved for sqrt, contains the '2' and rootCoeficient operand
+	tmp10 db length dup(0)	; reserved for sqrt, contains the result of the rootCoeficient addition, will act as input for the rootCoeficient multiplication
+	tmp11 db length dup(0)	; reserved for sqrt, contains the highest tmp value that's also below aux value
 	
+	; helper variables	
+	mem4 dw 0		; available
+	mem5 dw 0		; available 	
+
 .CODE
 
 MAIN PROC
@@ -59,21 +73,21 @@ MAIN PROC
  	call config	; initial configurations 	
         
         mainCycle:
-		lea dx, inputPromt	; load address of number1 prompt message for input prodecure   
+		lea dx, inputPromt	; load address of number1 prompt message for input procedure   
 		mov ah, 09h		; load function to print out sting in DX
 		int 21h			; execute 09h
 	
-        	lea si, numberOne	; load address of number1 array for input prodecure
+        	lea si, numberOne	; load address of number1 array for input procedure
         	call zeroNumber		; zero every digit of the array        
         	call readNumberInput	; read input of first number                                               
                     
-        	lea si, numberTwo       ; load address of number2 array for input prodecure     
+        	lea si, numberTwo       ; load address of number2 array for input procedure     
         	call zeroNumber		; zero every digit of the array
         	call readNumberInput	; read input of second number      
         	
         	call preformOperation	; maps te value in operation to the corresponding procedure      
         	
-        	; call putanewlineintheconsole    ; does what the procedure name says    
+        	call putanewlineintheconsole    ; does what the procedure name says    
         	
         	call outputResult       ; prints the result to the console
          	                                  
@@ -85,13 +99,9 @@ MAIN PROC
          	lea si, result		; zero every digit of the result
          	call zeroNumber
          	lea si, quotient        ; zero every digit of the division quotient
-         	call zeroNumber
-         	lea si, remainder       ; zero every digit of the remainder
-         	call zeroNumber	
+         	call zeroNumber         		
          	mov operation, 0	; zero operation
-         	mov resultSign, 0       ; set result sign to positive
-         	mov coeficient, 0       ; zero division quotient
-         	mov dividendPointer, 0
+         	mov resultSign, 0       ; set result sign to positive        	        
          	
         	jmp mainCycle		; repeat                                               
         
@@ -122,19 +132,304 @@ preformOperation proc
 	
 	cmp operation, 'v'
 	je sqrt
+	
+	; cmp operation, 'n'
+	; je nifValidator
+	
+	; cmp operation, 'c'
+	; je ccValidator
+	
+	; cmp operation, 'b'
+	; je ean13BarCodeValidator
         
-        ; the program works, there is not ret in here... on who's witchcraft does it work??             
-        ; maybe the ret on each of the operations returns to the main cycle. I'm complety oblivious
         ret
 preformOperation endp
 
 sqrt proc
-         
-	ret         
+        lea si, root       
+        call zeroNumber
+        lea si, aux
+        call zeroNumber
+	lea si, tmp8       
+        call zeroNumber           		                    
+        lea si, tmp9      
+        call zeroNumber           		          
+        lea si, tmp10       
+        call zeroNumber
+        mov rootPointer, 0     
+              		          
+	updateAux:
+	; multiply by 100 and add the dozens and unit digit -> aux = ( aux * 100 ) + rootPointer[i] + rootPointer[i + 1]	
+	
+	; lea di, axu	
+	; cmp []
+	
+	updateAuxStart:
+	
+	
+	lea di, aux			 
+	call multiplyBy100	
+	
+	xor ax, ax
+
+	lea di, aux + length - 2	; load dozens place
+	                
+        ; copy dozens digit
+        lea si, numberTwo	; set si to beggining of number2
+        mov al, rootPointer        
+        add si, ax		; point to rootPointer offset
+        mov al, [si]		; indirectly reference value
+        mov [di], al            ; insert number in memory address
+        
+        inc rootPointer
+        inc di
+	xor ax, ax
+	                          
+        ; copy units digit                                
+        lea si, numberTwo	; set si to beggining of number2
+        mov al, rootPointer
+        add si, ax		; point to rootPointer offset
+        mov al, [si]            ; indirectly reference value
+        mov [di], al            ; insert number in memory address
+        inc rootPointer		; this increment will set rootPointer ready for the next iteration                                                                                                       
+        
+ 	mov rootCoeficient, 0                          
+ 	
+ 	lea si, tmp9	
+	call zeroNumber	; set tmp9 to zero before cycle. tmp9 is expected to be 0 at the start
+         	        	    	    
+	rootMulTable:
+	; 1. calculate tmp value -> tmp = ( ( ( root * 2 ) * 10 ) + i ) * i , with i ranging from 0 to 9. i variable will be called rootCoeficient
+	; 	Calculate ( ( root * 2 ) * 10 ), it will hold the base value for each iteration of the remainging operation with the incrementable variable i
+	;	Do not override the base value, it will be the same for every iteration
+	;	Use the base value, add i and then multiply by i	
+	
+	; 2. on each iteration validate if it's above aux
+	; 2.1 if true, decrease i, and continue to step 3
+	; 2.2 if false, increase i, and re-calculate tmp	
+	
+	rootStepTwoCalculateBaseValue:
+	
+	; 1. calculate tmp value -> tmp = ( ( ( current root value * 2 ) * 10 ) + i ) * 1
+	
+	; ( current root value * 2 )
+	
+	; define second operand '2'		
+	lea di, tmp9 + length -	1	; change only the units digit
+	mov [di], 2		
+	
+	; preform multiplication -> current root value * 2
+	lea di, root	; indirectly reference root array
+  	mov mem1, di	; divMul input param for first operand
+  	
+  	lea di, tmp9	; indirectly reference tmp9  array
+  	mov mem2, di	; divMul input param for second operand
+  	
+  	lea di, result	; result
+	mov mem3, di	; divMul input param for result array
+			 			 		      	
+        call mulDiv	; multiplicate root by 2	           
+        
+        ; reset auxiliary array
+        lea di, tmp9 + length - 1	; only nedeed to change the units digit
+	mov [di], 0	; set tmp9 value back to 0                        
+	
+	; ( current root value * 2 ) * 10 
+	lea di, result
+	call multiplyBy10
+	
+	; save the base value (current root value * 2)
+	lea si, result
+	lea di, tmp8
+	mov cx, length
+	call copyArray 
+	
+	; reset result
+        lea si, result
+        call zeroNumber
+	
+	iterateOverRootValuePreformOperationAndValidate:
+	        
+	        ; reset result
+        	lea si, result
+        	call zeroNumber
+	        
+		; preform the remaining operations, adding i to the base value and then multiply it by i
+		
+		; add i -> baseValue + i
+		
+		lea si, tmp8			; set first operand, base value                                         
+		lea di, tmp9 + length - 1	; load the place where to put the rootCoeficient value	
+		mov al,	rootCoeficient		; get rootCoeficient value and put in ax for indirect transfer			
+		mov [di], al			; put the root coeficient in the units place of the tmp9 array
+		lea di, tmp9			; set second operand, reset the position to the start of the array 
+		lea bx, result			; set result array
+		call addNumbers
+		
+		; save the result in intermediary variable to be used as input for the multiplication
+		lea si, result	; copy origin
+		lea di, tmp10	; copy destination
+		call copyArray	; preform copy
+		
+		; reset result
+		lea si, result
+		call zeroNumber
+		
+		; multiply by i -> (baseValue + i) * 1
+		lea si, tmp10	; set first operand for multiplication
+		mov mem1, si	; set first operand for multiplication
+		
+		lea si, tmp9 + length - 1	; set value for the second operand for multiplication, root coeficient
+		mov al,	rootCoeficient
+		mov [si], al	; set value for the second operand for multiplication, root coeficient
+		lea si, tmp9
+		mov mem2, si
+		
+		lea si, result
+		mov mem3, si
+		
+		call muldiv	; preform multiplication				                                				                                		                                
+        	
+        	; 2 stop conditions for the coeficient step
+        	; Coeficient found or reached max number of iterations. Stop when any of them hits
+        	
+        	; First
+        	; Validate if the result is above to aux ( bx = 1 )
+        	; If is is below( bx = 0 ), increase the root coeficient by one and try again
+        	; until the result is above or equal to the aux
+        	
+        	; validate if result is above or equal to the remainder
+        	lea si, aux		
+		lea di, result        	        	        	
+        	call determineSubtractionSign	; result in bx        	
+        	cmp bx, 1
+        	je updateAuxAndRoot        	        	
+        	
+        	; Second
+        	; Stop after 9 was processed has a possible coeficient. 
+        	; When this happens, the inc below will overflow coeficient by one. We'll fix it a couple lines below
+        	cmp rootCoeficient, 10
+        	jae updateAuxAndRoot        	        	
+        	
+        	; save the result in intermediary variable to be used to update aux value in step 3
+		lea si, result	; copy origin
+		lea di, tmp11	; copy destination
+		call copyArray	; preform copy
+		
+		inc rootCoeficient				
+		
+		jmp iterateOverRootValuePreformOperationAndValidate
+        		        
+	updateAuxAndRoot:
+	
+	dec rootCoeficient	; fix rootCoeficient overflow
+	
+	; step 3. Update Aux and Root result
+	
+	; update aux -> aux = aux - tmp
+	; update root -> root = ( root * 10 ) + 1
+	
+	; update aux
+	lea si, aux	
+	lea di, tmp11   ; result tmp result was saved in tmp10
+	lea bx, result
+	call subNumbersMul
+	
+	lea si, result	; copy origin
+	lea di, aux	; copy destination
+	call copyArray	; preform copy
+	
+	; update root
+	lea di, root
+	call multiplyBy10
+	
+	lea di, root + length - 1
+	mov al, rootCoeficient
+	mov [di], al
+	 
+	; step 4. Validate end of algorithm
+	; if the rootPointer >= length
+	; if yes, finito
+	; if no, increment rootPointer and go to step 2
+	
+	cmp rootPointer, length
+	jae sqrtFinished
+	
+	jmp updateAux	                   
+	
+	sqrtFinished:
+	
+	lea si, root	; copy origin
+	lea di, result	; copy destination
+	call copyArray	; preform copy
+	 	     
+	ret		  
 sqrt endp
+
+multiplyBy10 proc
+ 	
+ 	; input: di should point to the array start
+ 	       
+  
+  
+ 	; mov al, 1	; indirectly reference 1
+ 	; cmp al, length	; if the amount of digits is equal to 1, cx will wrap around and bug everything
+ 	; jae mulByTenUnitDigit
+           
+        ; caution: ax is reset in this proc
+        mov ax, 0
+           
+        ; to multiply by 10, we'll shift each element once to the left (excluding right-most element)
+	mov cx, length - 1	; preform one less shift, because that one last shift would pull data from outside the array memory space, this position should be zero				
+		
+	leftShiftAuxMulBy10:		; increase every digit by a order of magnitude
+		mov al, [di + 1]	; get the digit at the right of the current position 
+		mov [di], al            ; override current digit with the one at it's right
+		inc di			; move si into the next lower significance digit
+		loop leftShiftAuxMulBy10
+	
+	mulByTenUnitDigit:
+	mov [di], 0	; set units digit to 0	      
+                  
+	ret
+	                  
+multiplyBy10 endp
+
+multiplyBy100 proc                                    
+	
+	; input: di should point to the array start
+	
+	
+        ; mov al, 2	; indirectly reference 2
+        ; cmp al, length	; if the amount of digits is equal or below of 2, cx will wrap around and bug everything
+ 	; jae mulByOneHundredUnitAndDozenDigit
+ 
+ 	; caution: ax is reset in this proc
+        mov ax, 0
+ 	
+	; to multiply by 100, we'll shift each element twice to the left (excluding left-most two elements)
+	mov cx, length - 2	; preform two less shifts, because those two last shifts would pull data from outside the array bounds
+		
+	leftShiftAuxMulBy100:		; increase every digit by a order of magnitude
+		mov al, [di + 2]	; get the digit at the right of the current position 
+		mov [di], al            ; override current digit with the one at it's right
+		inc di			; move si into the next lower significance digit
+		loop leftShiftAuxMulBy100                  
+	
+	mulByOneHundredUnitAndDozenDigit:
+	mov [di], 0	; set dozens digit to 0
+	
+	inc di		; move to the units digit
+	mov [di], 0	; set units digit to 0                 
+	
+	ret	                  
+multiplyBy100 endp
       
 integerDivision proc
-	                         		
+	lea si, remainder       ; zero every digit of the remainder         	
+        call zeroNumber
+        mov coeficient, 0       ; zero division quotient
+        mov dividendPointer, 0                         		
 	updateRemainder:                                         
 	
 		; update remainder
@@ -148,11 +443,11 @@ integerDivision proc
 		add di, dx              ; move di into the dividend unit defined by dividend pointer
 		mov cx, length - 1	; preform one less shift, because that one last shift would pull data from outside the array memory space				
 		
-		leftShitfRemainder:		; increase every digit by a order of magnitude
+		leftShiftRemainder:		; increase every digit by a order of magnitude
 			mov al, [si + 1]	; get the digit at the right of the current position 
 			mov [si], al            ; override current digit with the one at it's right
 			inc si			; move si into the next lower significance digit
-			loop leftShitfRemainder	; repeat for remaining digits
+			loop leftShiftRemainder	; repeat for remaining digits
 			
 		; add the unit digit
 		mov al, [di]	; select the digit from dividend to put in the units place of remainder 
@@ -166,8 +461,6 @@ integerDivision proc
 		
 		cmp bx, 0 ; if bx is 0, the remainder is above or equal to the divisor
 		je determineDivisorCoeficient
-		; EIII WATCH OUT: what will happen if the divisor is greater than the dividen? I guess this code will go apeshit. Come back to this... eventually       
-		; maybe just validate if the division if above or equal to the divison, else quocient is 0?
 		
 		mov dl, dividendPointer ; dividend pointer
         	cmp dl, length - 1	; stop when the dividen pointer value reached the lenght of the dividend
@@ -199,8 +492,7 @@ integerDivision proc
   			lea di, result		; result
 			mov mem3, di
 			 			 		      	
-        		call mulDiv		; multiplicate coeficient by divisor
-        		   
+        		call mulDiv		; multiplicate coeficient by divisor      		   
         		   
         		; validate if result is above or equal to the remainder
         		lea si, result		
@@ -240,11 +532,11 @@ integerDivision proc
  		mov cx, length - 1	; preform one less shift, because that one last shift would pull data from outside the array memory space				
  		lea si, quotient	
         	
-        	leftShitfRemainderDiv:		; increase every digit by a order of magnitude
+        	leftShiftRemainderDiv:		; increase every digit by a order of magnitude
 			mov al, [si + 1]	; get the digit at the right of the current position 
 			mov [si], al            ; override current digit with the one at it's right
 			inc si			; move si into the next lower significance digit
-			loop leftShitfRemainderDiv	; repeat for remaining digits
+			loop leftShiftRemainderDiv	; repeat for remaining digits
         	
         	; add the units value to the quotient 
         	mov al, coeficient
@@ -296,22 +588,21 @@ integerDivision proc
         	jb updateRemainder     ; do another iteration
   		
   		divisionFinished:      	
-  		
-  		
-        	; the is a bug in the division algorithm the quotient come 1 unit short every time
-		; instead of fixing the issue, we'll just add 1 to the quotient
-         	; lea di, tmp2 + length - 1	; setup array as number 1
-         	; mov [di], 1               	; move 1 into units position
-         	
-                ; lea si, quotient
-        	; lea di, tmp2	; array representing number 1
-        	; lea bx, result
-        	; call addNumbers
         	
         	lea si, quotient	; copy from result
         	lea di, result		; copy to quotient
         	mov cx, length		; result
         	call copyArray
+        	
+        	; the is a bug in the division algorithm the quotient come 1 unit short every time
+		; instead of finding and fixing the issue, we'll just add 1 to the quotient
+		
+         	lea di, tmp2 + length - 1	; setup array as number 1
+         	mov [di], 1               	; move 1 into units position         	
+                lea si, result
+        	lea di, tmp2	; array representing number 1
+        	lea bx, result
+        	call addNumbers
         	
         ret
 integerDivision endp
@@ -327,6 +618,11 @@ mulDiv proc
 	; on each iteration, we subtract that value by 1.
 	; We preform this while the second operand is different from zero
 	
+	; input
+	; mem1, address of the first element of the array representing the first operand
+	; mem2, address of the first element of the array representing the second operand
+	; mem3, address of the result array
+		
 	; this is a destructive procedure. The second operand will be changed, and because of such,
 	; before the algorithm starts, the second operand will be copied to tmp5 and will use that instead.
 	
@@ -505,7 +801,7 @@ subNumbersMul proc
 		cmp al, [di]
 		jae subDontSetCarryMul
 			
-		add al, 10	; minuend below subtrahend, so add the to the minuend ; you shit this add reset the carry flag. bugs out the sbb operations below		
+		add al, 10	; minuend below subtrahend, so add the to the minuend ; this add overrides the default carry flag. bugs out the sbb operations below		
 		
 		subSetCarryMul:	
 		sub al, [di]			; subtract values and carry
@@ -583,7 +879,7 @@ subNumbers proc
 		cmp al, [di]
 		jae subDontSetCarry
 		
-		add al, 10	; minuend below subtrahend, so add the to the minuend ; you shit this add reset the carry flag. bugs out the sbb operations below		
+		add al, 10	; minuend below subtrahend, so add the to the minuend ; this add overrides the default carry flag. bugs out the sbb operations below		
 	
 		subSetCarry:	
 		sub al, [di]			; subtract values and carry
@@ -646,13 +942,15 @@ addNumbers proc
 		loop addElements 
 	              
 	ret	              
-addNumbers endp
+addNumbers endp  
+
 
 copyArray proc
               
 	; si : array to copy values from
 	; di : array to copy values to	
-	; cx : length of the arrays
+	; deprecated; cx : length of the arrays
+	mov cx, length
 	
 	doCopy:
 		mov al, [si]
@@ -683,6 +981,10 @@ swapDigitsBetweenNumbers proc
 swapDigitsBetweenNumbers endp
                          
 determineSubtractionSign proc
+        
+        ; compare arrays in SI and DI
+        
+        ; on procedure end, SI and DI are not within their initial array bounds
         
         mov ax, 0		; zero register
         mov bx, 0		; bx contains the subtraction result sign (0 positive or zero result, 1 negative result)  	
@@ -718,9 +1020,9 @@ determineSubtractionSign proc
 		 		                     
    		loop compareDigitsToValidateSubtraction
    		
-   		; if reached here, subtraction is results in zero
+   		; if reached here, subtraction results is zero
    		
-   		mov bx, 1
+   		mov bx, 0
    		
 	ret
 determineSubtractionSign endp             
@@ -730,8 +1032,16 @@ outputResult PROC
 	lea dx, resultPreText	; move output prefix text 
 	mov ah, 09h	; load function to print out sting in DX
 	int 21h         ; execute 09h                                                           	
-	                    	
-	mov cx, length	; do loop for every element of the array
+	
+	; The output procedure validates for leading zeros and if it's a leading zero, it does not print it
+	; The issue is, if no validation is preformed, for the number zero, nothing will be printed
+	; this because the the leading zero validation uses any number different to zero
+	; since zero does not contain any non-zero number, every digit of the array will be considered a leading zero and nothing will get printed
+	; To fix this issue, the print loop will not print the last digit (meaning it will not reform the leading zero on the last digit)
+	; then we will manually print the last digit (without validating for a leading zero).
+	; Like this, we assure when printing number 0 that a leading zero bug does not occour.
+	                    
+	mov cx, length 	- 1	; loop over every digit minus the least significant digit
 	lea si, result  ; point into the beggining result array	                    
 	                    
 	outputSignValidation:
@@ -741,7 +1051,9 @@ outputResult PROC
 	call outputMinusChar	
 	
 	outputDigit:
-		; the next line is moving a value into dh. why the fuck why? does si point to a dw var? I can't be bothered to check right now. Future you, do that
+		; process each digit on each iteration
+		; validate for leading zero and print if it isn't a leading zero
+		; todo the next line is moving a value into dh. why? si shouldn't point to a dw var? I can't be bothered to check right now. Future you, do that
 	    	mov dx, [si]	; Move digit from result into dx for processing
 	    	cmp dl, 0	; Compare the digit with zero
 	    	je checkZero	; If zero, check if it can be ignored as a leading zero
@@ -761,9 +1073,37 @@ outputResult PROC
 	skipDigit:
 	    	inc si		; Move to the next digit
 	    	loop outputDigit; Repeat for the next digit
+	
+	; manually print the last digit 
+	mov dx, [si]    	
+	add dx, 48	; Convert number into ASCII character
+	mov ah, 02h	; Load function to print out digit in DX
+	int 21h		; Execute
         	          
 	ret          
-outputResult ENDP
+outputResult ENDP   
+
+
+zeroNumber proc
+	       
+	; input: number to reset is defined by the addresss in si
+	; after function: si register points to the start of the array
+	       
+	mov cx, length
+	
+	; si points to the biggining of the array
+	
+	zeroDigit:
+		mov [si], 0
+		inc si
+		loop zeroDigit
+	
+	; WARNING: do not add -1 to length. The previous loop makes si overflow the array by one position
+	; and therefore, subtracting si by length returns to the first element of the array
+	sub si, length	
+			
+	ret
+zeroNumber endp  
 
            
 readNumberInput PROC
@@ -793,11 +1133,26 @@ readNumberInput PROC
 	        cmp al, 45	; - subtraction operation
 	        je set_sub_operation
 	        
-	        cmp al, 42	; * addition operation
+	        cmp al, 42	; * multiplication operation
 	        je set_mul_operation
 	        
-	        cmp al, 47	; / addition operation
+	        cmp al, 47	; / division operation
 	        je set_div_operation
+	        
+	        cmp al, 86	; V sqrt operation
+	        je set_sqrt_operation
+	        
+	        cmp al, 118	; v sqrt operation
+	        je set_sqrt_operation
+	        
+	        ; cmp al, 110	; n nif validation
+	        ; je set_nif_validation
+	        
+	        ; cmp al, 99	; c cc validation
+	        ; je set_cc_validation
+	        
+	        ; cmp al, 98	; b ean13 barcode validation
+	        ; je set_ean13_barcode_validation
 	        
 	   	cmp al, 48	; validate if ascii code is lower than {ascci code 48, decimal 0}, if so, not a valid number, ask digit again
 	   	jl not_a_number
@@ -825,7 +1180,7 @@ readNumberInput PROC
 	   	
 	   	set_sum_operation:
 	   		cmp operation, 0
-	   		jne  inputIsFinished	; operation has already been set.
+	   		jne inputIsFinished	; operation has already been set.
 	   		
 	   		mov operation, '+'
 	   		
@@ -833,7 +1188,7 @@ readNumberInput PROC
 	   		
 	   	set_sub_operation:
 	   		cmp operation, 0
-	   		jne  inputIsFinished	; operation has already been set.
+	   		jne inputIsFinished	; operation has already been set.
 	   		
 	   		mov operation, '-'
 	   		
@@ -841,7 +1196,7 @@ readNumberInput PROC
 	   		
 	   	set_mul_operation:
 	   		cmp operation, 0
-	   		jne  inputIsFinished	; operation has already been set.
+	   		jne inputIsFinished	; operation has already been set.
 	   		
 	   		mov operation, '*'
 	   		
@@ -849,11 +1204,19 @@ readNumberInput PROC
 	   		
 	   	set_div_operation:
 	   		cmp operation, 0
-	   		jne  inputIsFinished	; operation has already been set.
+	   		jne inputIsFinished	; operation has already been set.
 	   		
 	   		mov operation, '/'
 	   		
 	   		jmp inputIsFinished
+	
+		set_sqrt_operation:
+	   		cmp operation, 0
+	   		jne inputIsFinished	; operation has already been set.
+	   		
+	   		mov operation, 'v'
+	   		
+	   		jmp inputIsFinished      	   			   		
 	   		   	
 	        not_a_number:
 			; you morom can't even put a valid input shame grow a tumor shame shame shame
@@ -918,27 +1281,7 @@ readNumberInput PROC
 			          
 	ret          
 readNumberInput ENDP
-
-zeroNumber proc
-	       
-	; input: number to reset is defined by the addresss in si
-	; after function: si register points to the start of the array
-	       
-	mov cx, length
-	
-	; si points to the biggining of the array
-	
-	zeroDigit:
-		mov [si], 0
-		inc si
-		loop zeroDigit
-	
-	; WARNING: do not add -1 to length. The previous loop makes si overflow the array by one position
-	; and therefore, subtracting si by length returns to the first element of the array
-	sub si, length	
-			
-	ret
-zeroNumber endp                                                     
+                                                   
                   
 putANewLineInTheConsole proc
 	
@@ -1009,4 +1352,4 @@ exitProgram proc
 exitProgram endp	
 
 	
-END	
+END 
