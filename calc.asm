@@ -5,14 +5,17 @@
 
 .stack 256
 
-.DATA                                                                                                                            	        
-        resultPreText db length dup(0)
+.DATA                                  
                                            
 	; data for result output       
 	result db length dup(0)		; output result array 
 	resultSign db 0			; represents the sign of the result of an operation with unsigned numbers                               
 	negativeResultString db 45, '$'	; prints a minus '-'
-                   
+        textOutput db 0			; whether the result is a number resulting of a calculation or text (0: number; 1: text) 
+        textToOutputMemoryAddress dw 0	; specify the memory address of the string to print
+        validString db 'Valid$'
+        invalidString db 'Invalid$'
+        divisionByZero db 'Invalid: division by zero$'
            
 	; main variables	
 	length equ 8			; define constant with the length of the numbers
@@ -150,9 +153,9 @@ MAIN PROC
         	
         	call preformOperation	; maps the value in operation to the corresponding procedure      
         	       
-		call resetOutputTextArea	         	                                    	       
+		call resetOutputTextArea; remove whatever was rendered withing the output text area	         	                                    	       
         	       
-        	call printOutput       ; renders the result to the console
+        	call printOutput	; renders the result to the console
                 
 		; reset variables, the code flow requires these variables to be 0 at the begining of each operation
          	lea si, result		; zero every digit of the result
@@ -161,7 +164,7 @@ MAIN PROC
          	call zeroNumber         		
          	mov operation, 0	; zero operation
          	mov resultSign, 0       ; set result sign to positive 
-         	
+         	mov textOutput, 0
          	mov inputAreaCurrentColumn, 2
          	mov inputAreaCurrentRow, 2       	        
          	
@@ -437,10 +440,6 @@ sqrt endp
 multiplyBy10 proc
  	
  	; input: di should point to the array start
- 	       
- 	; mov al, 1	; indirectly reference 1
- 	; cmp al, length	; if the amount of digits is equal to 1, cx will wrap around and bug everything
- 	; jae mulByTenUnitDigit
            
         ; caution: ax is reset in this proc
         mov ax, 0
@@ -466,11 +465,6 @@ multiplyBy10 endp
 multiplyBy100 proc                                    
 	
 	; input: di should point to the array start
-	
-	
-        ; mov al, 2	; indirectly reference 2
-        ; cmp al, length	; if the amount of digits is equal or below of 2, cx will wrap around and bug everything
- 	; jae mulByOneHundredUnitAndDozenDigit
  
  	; caution: ax is reset in this proc
         mov ax, 0
@@ -496,6 +490,16 @@ multiplyBy100 endp
              
              
 integerDivision proc
+	                 
+	; validate division by 0 case	                 
+	lea di, numberTwo	; input for proc arrayIsZero
+	call arrayIsZero	; result in dx             
+	cmp dx, 0		; dx: 0 -> number is zero ; dx: 1 -> number isn't zero ; 
+	mov textOutput, 1
+	lea cx, divisionByZero 
+	mov textToOutputMemoryAddress, cx
+	ret
+	
 	lea si, remainder       ; zero every digit of the remainder         	
         call zeroNumber
         mov coeficient, 0       ; zero division quotient
@@ -580,9 +584,9 @@ integerDivision proc
         		; Coeficient found or reached max number of iterations. Stop when any of them hits
         	
         		; First
-        		; Validate if the mutiplication of the coeficient by the divisor is above or equal to the remainder ( bx = 0 )
-        		; If is coeficient multiplication is below than the remainder ( bx = 1 ), increase the coeficient by one and try again
-        		; until the coeficient multiplication * divisor is above or equal to the remainder
+        		; Validate if the mutiplication of the coeficient by the divisor is above to the remainder 
+        		; If is coeficient multiplication is below than the remainder ( bx = 0 ), increase the coeficient by one and try again
+        		; until the coeficient multiplication * divisor is above to the remainder
         		cmp bx, 1
         		je updateRemainderAndQuotient         		        	        		
         		
@@ -666,16 +670,6 @@ integerDivision proc
         	lea di, result		; copy to quotient
         	mov cx, length		; result
         	call copyArray
-        	
-        	; the is a bug in the division algorithm the quotient come 1 unit short every time
-		; instead of finding and fixing the issue, we'll just add 1 to the quotient
-		
-         	;lea di, tmp2 + length - 1	; setup array as number 1
-         	;mov [di], 1               	; move 1 into units position         	
-                ;lea si, result
-        	;lea di, tmp2	; array representing number 1
-        	;lea bx, result
-        	;call addNumbers
         	
         ret
 integerDivision endp
@@ -1120,11 +1114,6 @@ determineSubtractionSign proc
 determineSubtractionSign endp             
                
                
-               
-  
-           
-           
-
 zeroNumber proc
 	       
 	; input: number to reset is defined by the addresss in si
@@ -1145,8 +1134,7 @@ zeroNumber proc
 			
 	ret
 zeroNumber endp  
-           
-           
+                     
            
 readNumberInput PROC
 	                                                                
@@ -1156,10 +1144,7 @@ readNumberInput PROC
 	
 	; set max amount of digits per number
 	mov cx, length	     
-	mov inputLoopCounter, cx	; max digits in the number	         		
-	
-	mov ax, 0000h	; reset mouse
-	int 33h
+	mov inputLoopCounter, cx	; max digits in the number	         				
 	
 	readingDigit:
 		     
@@ -1334,7 +1319,7 @@ readNumberInput PROC
 			validateForthRowFifthColumn:                  
 		        ;cmp operation, 0
 	   		;jne inputIsFinished	; operation has already been set.	   
-	   		;mov operation, 'e'	   		
+	   		;mov operation, 'c'	   		
 	   		;jmp inputIsFinished
 		        jmp readingDigit	; do not preform cc validation for now, cc required keyboard input. As of now, it doesn't work in conjunction with mouse input          
 
@@ -1449,13 +1434,6 @@ readNumberInput PROC
 	        	cmp cx, 0	
 	        	je readingDigit	; if limit reached, don't add process input and go back to the read cycle
 	        	
-	        	
-	        	
-	        	; you're still a shameful moron
-	        	; convert from the ascii to a usable number
-	        	;mov ah, 0	; ah is not used, zero out 
-	        	;sub al, '0'     ; convert ascii code into decimal number
-	        	
 	        	; todo validate divisor. Must not be zero.  You can use the arrayIsZero procedure after the input has been completed 	        	
 	        	
 	        	; digits will be pushed into the stack on their correct order of magnitude
@@ -1536,12 +1514,10 @@ printInputDigit endp
 
 
 
-printOutput proc                                                          	
+printOutput proc                                                          			
 	                                                                                      
 	; printOutput proc -> renders the result in the output text area
-	
-	;mov ax, 0xB800	; point ax to the start of video memory (0xB800:0000)
-	;mov es, ax
+
 	xor di, di	; di used to iterate through video memory
 	
 	; calculte input cell offset
@@ -1558,6 +1534,10 @@ printOutput proc
 	; offset has been calculated, now move di to the correct position
 	
 	mov di, ax	; offset di to the start cell of the output text area			                                                                                     
+	
+	; determine which type of output we're facing: number or text
+	cmp textOutput, 1	; 0: number , 1: text
+	je printTextOutput	; if text output, go to the text output code
 	                                                                                      
 	; The output procedure validates for leading zeros and if it's a leading zero, it does not print it
 	; The issue is, if no validation is preformed, for the number zero, nothing will be printed
@@ -1614,40 +1594,35 @@ printOutput proc
 	mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
 	add di, 2			; offset di by 2, needs also to skip the current cell attribute byte
 	
+	jmp printOutputFinished
+	
+	printTextOutput:
+	        
+	        mov si, textToOutputMemoryAddress
+	        
+	        printDigitFromTextOutput:
+	       
+			cmp [si], '$'
+			je printOutputFinished
+	                mov al, [si]
+			mov byte ptr es:[di], al	; write character
+			mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+	  		
+	  		add di, 2
+	  		inc si
+	  		
+	  		jmp printDigitFromTextOutput
+	  		
+	printOutputFinished:	  		
+	  
 	ret
 printOutput endp
-          
-                                                   
-                  
-putANewLineInTheConsole proc
-	
-	lea dx, newline	; carriage return and line feed make up a newline.
-	mov ah, 09h
-	int 21h
-	
-	ret	
-putANewLineInTheConsole endp
-            
-            
-            
-putABackspaceInTheConsoleAndDeleteThePreviousCharacter proc
-	; deprecated
-	; meant to be used for data validation, when user does not press backspace key
-	lea dx, backspace_string	
-	mov ah, 09h
-	int 21h	
-	
-	ret	
-putABackspaceInTheConsoleAndDeleteThePreviousCharacter endp
 
- 
 
 deleteLastCharacter proc
 	
 	dec inputAreaCurrentColumn
 	
-	;mov ax, 0xB800		; point ax to the start of video memory (0xB800:0000)
-	;mov es, ax
 	xor di, di		; di used to iterate through video memory
 	
 	; calculte input cell offset
@@ -1664,56 +1639,28 @@ deleteLastCharacter proc
 	
 	
 	mov byte ptr es:[di], ' '	; write character
-	mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, red foreground
-	
-	
+	mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, red foreground	
 	
 	ret
-deleteLastCharacter endp              
-               
-               
-deleteCurrentCharacter proc
-	; meant to be used when user inserts a backspace
-	lea dx, removeCurrentCharacter
-	mov ah, 09h
-	int 21h	
-	
-	ret	
-deleteCurrentCharacter endp 
-               
-               
-               
-outputMinusChar proc	; deprecated
-	
-	lea dx, negativeResultString
-	mov ah, 09h
-	int 21h	
-	
-	ret	
-outputMinusChar endp  
-   
-   
-        
-correctInvalidBackspace proc
-	
-	lea dx, addSpace
-	mov ah, 09h
-	int 21h	
-	
-	ret	
-correctInvalidBackspace endp   
-     
+deleteLastCharacter endp                   
      
      
 config proc
+	; config data segment
 	mov ax, @data	; load data segment
 	mov ds, ax      ; load data segment
 	
+	; config extra segment for video memory
 	mov ax, 0xB800	; load video memory start address
 	mov es, ax	; load extra segment with video memory
 	
+	; set text video mode
 	mov ax, 03h	; set video mode configuration 3
-	int 10h	                                                                                                                                                                                 	
+	int 10h	  
+	
+	; reset mouse cursor
+	mov ax, 0000h	; reset mouse
+	int 33h                                                                                                                                                                               	
 			         
        	ret
 config endp
@@ -1776,8 +1723,6 @@ renderUI proc
 	
 	
 	; ---------------- Calculator UI ---------------------
-	;mov ax, 0xB800		; point ax to the start of video memory (0xB800:0000)
-	;mov es, ax
 	xor di, di		; di used to iterate through video memory
 	
 	lea si, calculatorUI	; point to the start of the string
@@ -1885,12 +1830,10 @@ renderUI proc
 		; "บ             บ             บ             บ             บ             บ",13,10,
 		; "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
 		; "บ             บ             บ             บ             บ             บ",13,10,
-		; "บ 80 * 22 + 7 บ      .      บ     NEG     บ      *      บ      /      บ",13,10,
+		; "บ 80 * 22 + 7 บ      .      บ     END     บ      *      บ      /      บ",13,10,
 		; "บ             บ             บ             บ             บ             บ",13,10,
 		; "ศอออออออออออออสอออออออออออออสอออออออออออออสอออออออออออออสอออออออออออออผ$"
-		
-		;mov ax, 0xB800		; point ax to the start of video memory (0xB800:0000)
-		;mov es, ax
+
 		xor di, di		; di used to iterate through video memory
 		mov cx, 0		; cx used to iterate over the randomNumberSequence array		
 	
@@ -2128,7 +2071,6 @@ renderUI endp
 
 resetInputTextArea proc
 	
-	; 69
 	 	
 	; calculte offset to start of input text area
 	mov ax, 80	; row length
@@ -2147,7 +2089,7 @@ resetInputTextArea proc
 		add di, 2
 	 	loop resetCellITALine1
 	mov cx, 69	; set counter for next line
-	add di, 22	; advance di to start of next line
+	add di, 22	; offset di to start of next line
 	
 	resetCellITALine2:
 		; write to video memory		 
@@ -2156,7 +2098,7 @@ resetInputTextArea proc
 		add di, 2
 	 	loop resetCellITALine2
 	mov cx, 69	; set counter for next line
-	add di, 22	; advance di to start of next line
+	add di, 22	; offset di to start of next line
 	
 	resetCellITALine3:
 		; write to video memory		 
@@ -2170,8 +2112,6 @@ resetInputTextArea endp
    
        
 resetOutputTextArea proc 	
-       
-	; 41 
         
         ; calculte offset to start of input text area
 	mov ax, 80	; row length
@@ -2190,7 +2130,7 @@ resetOutputTextArea proc
 		add di, 2
 	 	loop resetCellOTALine1
 	mov cx, 41	; set counter for next line
-	add di, 78	; advance di to start of next line
+	add di, 78	; offset di to start of next line
 	
 	resetCellOTALine2:
 		; write to video memory		 
@@ -2199,7 +2139,7 @@ resetOutputTextArea proc
 		add di, 2
 	 	loop resetCellOTALine2
 	mov cx, 41	; set counter for next line              
-	add di, 78	; advance di to start of next line
+	add di, 78	; offset di to start of next line
 	
 	resetCellOTALine3:
 		; write to video memory		 
@@ -2216,9 +2156,7 @@ exitProgram proc
 	; when exiting the aplication, DOS console does not reset the video memory, 
 	; meaning that the calculator will still be visible
 	; Because of this, we will manually reset the background to all black before exiting the application
-	
-	;mov ax, 0xB800	; point ax to the start of video memory (0xB800:0000)
-	;mov es, ax      ; 
+ 
 	xor di, di	; di = 0 (start of video memory)
 	
 	mov ah, 09h	; write character(al) and attribute(bl)
