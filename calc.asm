@@ -1,39 +1,39 @@
-;calculator
+; search for todo's throughout the file        
+
+; calculator
 .MODEL SMALL  
 
 .stack 256
 
-.DATA                                                                                                          
-	; text data
-	inputPromt db 'input: $'		
- 	resultPreText db ' = $'                   
-	newline db 13, 10, '$'			; Carriage Return and Line Feed make up a newline.
-        backspace_string db 8, ' ', 8, '$'	; meant to be used for data validation, when user does not press the backspace key
-        removeCurrentCharacter db ' ', 8, '$'   ; meant to be used when user presses the backspace key
-        addSpace db 32, '$'			; prints a space ' '     
-        negativeResultString db 45, '$'         ; prints a minus '-'
-             
-                               
+.DATA                                                                                                                            	        
+        resultPreText db length dup(0)
+                                           
 	; data for result output       
 	result db length dup(0)		; output result array 
 	resultSign db 0			; represents the sign of the result of an operation with unsigned numbers                               
-        mem3 dw 0		; reserved to reference result array memory address
+	negativeResultString db 45, '$'	; prints a minus '-'
+                   
            
-           
-	; main variables
-	; length should be an even number                                                           
+	; main variables	
 	length equ 8			; define constant with the length of the numbers
+					; length should be an even number (because of square root algorithm)
 	lengthTimesTwo equ length * 2	; for the multiplication result. The maximum size of the result will be the sum of the length of both operands (operands are of the same size, and therefore time 2)		                                          
+	inputLoopCounter dw 0		; counter for remaining amount of digit to insert for a number
 	numberOne db length dup(0)	; input number 1 array
 	numberTwo db length dup(0)	; input number 2 array
-	mem1 dw 0			; reserved to reference operand 1 array memory address
-	mem2 dw 0			; reserved to reference operand 2 array memory address
-	operation db 0			; specifies the operation between the numbers (+, - , /, v (v -> sqrt, only uses one number))
-	                                                                  
+	mem1 dw 0	; reserved to reference operand 1 array memory address
+	mem2 dw 0	; reserved to reference operand 2 array memory address
+	mem3 dw 0	; reserved to reference result array memory address
+	tempX dw 0	; used to save the input X coordinated for after the input timeout, cus input timeout overrides cx
+	tempY dw 0	; used to save the input Y coordinated for after the input timeout, cus input timeout overrides dx
+	operation db 0			; specifies the operation between the numbers (+, - , /, v (v -> sqrt, only uses one number))	
+	randomNumberSequence db 10 dup('A')	; contains the numbers for the calculator UI. The numbers won't be printed sequentially
+						; the order of the numbers in this array, will be the order the numbers are displayed in the calculator
+	mouseInputLastState dw 0
 	                                                                  
 	; variable for subtraction
-	anotherCarryFlag db 0		; used in subtraction to define a carry value between iterations
-			                                                                  
+	anotherCarryFlag db 0		; used in subtraction to define a carry value between iterations		                                                                  
+
 	    
 	; variables for multiplication	                                                                                           
 	anotherCounter db 0	; used for multiplication algorithm	
@@ -43,7 +43,7 @@
 	tmp5 db length dup(0)	; reserved for mulDiv, used to copy the second operand into a discartable array
 	 
 	 
-	; varaibles for division	 
+	; variables for division	 
 	remainder db length dup(0)	; input number 2 array
 	coeficient db 0			; references the coeficient in the divisor algorithm
 	quotient db length dup(0)	; ouput quotient
@@ -60,23 +60,86 @@
 	tmp8 db length dup(0)	; reserved for sqrt, contains the base value for each iteration 			
 	tmp9 db length dup(0)	; reserved for sqrt, contains the '2' and rootCoeficient operand
 	tmp10 db length dup(0)	; reserved for sqrt, contains the result of the rootCoeficient addition, will act as input for the rootCoeficient multiplication
-	tmp11 db length dup(0)	; reserved for sqrt, contains the highest tmp value that's also below aux value
+	tmp11 db length dup(0)	; reserved for sqrt, contains the highest tmp value that's also below aux value 
 	
-	; helper variables	
-	mem4 dw 0		; available
-	mem5 dw 0		; available 	
-
-.CODE
+	; variables for UI
+	; the calculator UI is configured for Code Page 437 standard. 
+	; the symbols in this table are in the equal ascii code number.
+	; when running on DOSBOX, the symbols will be rendered according to Code Page 437 standard
+	
+	; 	Corners
+	; ษ -> top left corner
+	; ป -> top right corner
+	; ศ -> bottom left corner
+	; ผ -> bottom right corner
+	
+	;	lines
+	; บ -> Vertical line
+	; อ -> Horizontal lines
+	
+	;	Crosspath corners
+	; ฬ -> top, bottom, right
+	; ห -> left, bottom, right
+	; น -> top, left, bottom
+	; ฮ -> top, bottom, right, left
+	; ส -> left, top, right
+	
+	;	Symbols                  
+	; ý -> superscript 2     
+	; ๛ -> root operator symbol	
+	; ý๛ together act as square root symbol
+	
+	calculatorUI db "",
+		db "ษออออออออออออออออออออนSmart Logic Based calculatorฬอออออออออออออออออออป",13,10,
+		db "บ                                                                     บ",13,10,
+		db "บ                                                                     บ",13,10,
+		db "บ                                                                     บ",13,10,
+		db "ฬอออออออออออออออออออออออออออออออออออออออออหอออออออออออออหอออออออออออออน",13,10,
+		db "บ                                         บ             บ             บ",13,10,
+		db "บ                                         บ      =      บ     DEL     บ",13,10,
+		db "บ                                         บ             บ             บ",13,10,
+		db "ฬอออออออออออออหอออออออออออออหอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
+		db "บ             บ             บ             บ             บ             บ",13,10,
+		db "บ             บ             บ             บ    EAN13    บ     NIF     บ",13,10,
+		db "บ             บ             บ             บ             บ             บ",13,10,
+		db "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
+		db "บ             บ             บ             บ             บ             บ",13,10,
+		db "บ             บ             บ             บ     ý๛      บ     C C     บ",13,10,
+		db "บ             บ             บ             บ             บ             บ",13,10,
+		db "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
+		db "บ             บ             บ             บ             บ             บ",13,10,
+		db "บ             บ             บ             บ      +      บ      -      บ",13,10,
+		db "บ             บ             บ             บ             บ             บ",13,10,
+		db "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
+		db "บ             บ             บ             บ             บ             บ",13,10,
+		db "บ             บ      .      บ     END     บ      *      บ      /      บ",13,10,
+		db "บ             บ             บ             บ             บ             บ",13,10,
+		db "ศอออออออออออออสอออออออออออออสอออออออออออออสอออออออออออออสอออออออออออออผ$"
+	renderTableCurrentRow dw 0	; row guide variable for table output
+	renderTableCurrentColumn dw 4	; column guide variable for table output
+        
+        inputAreaCurrentRow dw 2	; row guide variable to keep track of the next row when printing digit to input area
+        inputAreaCurrentColumn dw 2	; column guide variable to keep track of the next column when printing digit to input area
+        digitToPrint db 0
+        newline db 13, 10, '$'			; Carriage Return and Line Feed make up a newline.
+        backspace_string db 8, ' ', 8, '$'	; meant to be used for data validation, when user does not press the backspace key
+        removeCurrentCharacter db ' ', 8, '$'   ; meant to be used when user presses the backspace key
+        addSpace db 32, '$'			; prints a space ' '
+        
+        outputAreaCurrentRow dw 6	; row guide variable to keep track of the next row when printing digit to output area
+        outputAreaCurrentColumn dw 2	; column guide variable to keep track of the next column when printing digit to output area
+.CODE                                                   
 
 MAIN PROC
- 	
- 	call config	; initial configurations 	
+ 	call config	; initial configurations     			 		
+	 
+ 	call generateRandomNumberSequence
+        call renderUI	; render user interface
         
-        mainCycle:
-		lea dx, inputPromt	; load address of number1 prompt message for input procedure   
-		mov ah, 09h		; load function to print out sting in DX
-		int 21h			; execute 09h
-	
+        mainCycle:			
+	       	
+	       	call resetInputTextArea	; remove whatever was rendered withing the input text area	       	 	        
+	        
         	lea si, numberOne	; load address of number1 array for input procedure
         	call zeroNumber		; zero every digit of the array        
         	call readNumberInput	; read input of first number                                               
@@ -85,28 +148,29 @@ MAIN PROC
         	call zeroNumber		; zero every digit of the array
         	call readNumberInput	; read input of second number      
         	
-        	call preformOperation	; maps te value in operation to the corresponding procedure      
-        	
-        	call putanewlineintheconsole    ; does what the procedure name says    
-        	
-        	call outputResult       ; prints the result to the console
-         	                                  
-         	call putANewLineInTheConsole	; does what the procedure name says
-         	call putANewLineInTheConsole	; does what the procedure name says
-         	call putANewLineInTheConsole	; does what the procedure name says
-         	         	                            
+        	call preformOperation	; maps the value in operation to the corresponding procedure      
+        	       
+		call resetOutputTextArea	         	                                    	       
+        	       
+        	call printOutput       ; renders the result to the console
+                
 		; reset variables, the code flow requires these variables to be 0 at the begining of each operation
          	lea si, result		; zero every digit of the result
          	call zeroNumber
          	lea si, quotient        ; zero every digit of the division quotient
          	call zeroNumber         		
          	mov operation, 0	; zero operation
-         	mov resultSign, 0       ; set result sign to positive        	        
+         	mov resultSign, 0       ; set result sign to positive 
+         	
+         	mov inputAreaCurrentColumn, 2
+         	mov inputAreaCurrentRow, 2       	        
          	
         	jmp mainCycle		; repeat                                               
-        
+	ret        
 MAIN ENDP
-
+              
+              
+              
 preformOperation proc
 
 	lea si, numberOne
@@ -117,6 +181,10 @@ preformOperation proc
  	
  	lea bx, result
  	mov mem3, bx
+ 	
+ 	lea si, numberOne
+ 	lea di, numberTwo
+ 	lea bx, result
  	                    
 	cmp operation, '+'
 	je addNumbers
@@ -130,7 +198,7 @@ preformOperation proc
 	cmp operation, '/'
 	je integerDivision
 	
-	cmp operation, 'v'
+	cmp operation, 's'
 	je sqrt
 	
 	; cmp operation, 'n'
@@ -139,12 +207,14 @@ preformOperation proc
 	; cmp operation, 'c'
 	; je ccValidator
 	
-	; cmp operation, 'b'
+	; cmp operation, 'e'
 	; je ean13BarCodeValidator
         
         ret
 preformOperation endp
-
+     
+     
+     
 sqrt proc
         lea si, root       
         call zeroNumber
@@ -161,11 +231,7 @@ sqrt proc
 	updateAux:
 	; multiply by 100 and add the dozens and unit digit -> aux = ( aux * 100 ) + rootPointer[i] + rootPointer[i + 1]	
 	
-	; lea di, axu	
-	; cmp []
-	
-	updateAuxStart:
-	
+	updateAuxStart:	
 	
 	lea di, aux			 
 	call multiplyBy100	
@@ -365,13 +431,13 @@ sqrt proc
 	 	     
 	ret		  
 sqrt endp
-
+        
+        
+        
 multiplyBy10 proc
  	
  	; input: di should point to the array start
  	       
-  
-  
  	; mov al, 1	; indirectly reference 1
  	; cmp al, length	; if the amount of digits is equal to 1, cx will wrap around and bug everything
  	; jae mulByTenUnitDigit
@@ -394,7 +460,9 @@ multiplyBy10 proc
 	ret
 	                  
 multiplyBy10 endp
-
+       
+       
+       
 multiplyBy100 proc                                    
 	
 	; input: di should point to the array start
@@ -424,12 +492,17 @@ multiplyBy100 proc
 	
 	ret	                  
 multiplyBy100 endp
-      
+             
+             
+             
 integerDivision proc
 	lea si, remainder       ; zero every digit of the remainder         	
         call zeroNumber
         mov coeficient, 0       ; zero division quotient
         mov dividendPointer, 0                         		
+	
+	; todo validate if divisor is 0
+	
 	updateRemainder:                                         
 	
 		; update remainder
@@ -463,7 +536,7 @@ integerDivision proc
 		je determineDivisorCoeficient
 		
 		mov dl, dividendPointer ; dividend pointer
-        	cmp dl, length - 1	; stop when the dividen pointer value reached the lenght of the dividend
+        	cmp dl, length - 1	; stop when the dividen pointer value reached the length of the dividend
 		je determineDivisorCoeficient
 		     		   
 		inc dividendPointer
@@ -495,13 +568,13 @@ integerDivision proc
         		call mulDiv		; multiplicate coeficient by divisor      		   
         		   
         		; validate if result is above or equal to the remainder
-        		lea si, result		
-			lea di, remainder 	
+        		lea si, remainder
+			lea di,	result	  	
         		call determineSubtractionSign	; result in bx
         		
         		; reset result
         		lea si, result
-        		call zeroNumber
+        		call zeroNumber			; procedure cannot affect bx value
         		
         		; 2 stop conditions for the coeficient step
         		; Coeficient found or reached max number of iterations. Stop when any of them hits
@@ -510,7 +583,7 @@ integerDivision proc
         		; Validate if the mutiplication of the coeficient by the divisor is above or equal to the remainder ( bx = 0 )
         		; If is coeficient multiplication is below than the remainder ( bx = 1 ), increase the coeficient by one and try again
         		; until the coeficient multiplication * divisor is above or equal to the remainder
-        		cmp bx, 0
+        		cmp bx, 1
         		je updateRemainderAndQuotient         		        	        		
         		
         		; Second
@@ -597,16 +670,18 @@ integerDivision proc
         	; the is a bug in the division algorithm the quotient come 1 unit short every time
 		; instead of finding and fixing the issue, we'll just add 1 to the quotient
 		
-         	lea di, tmp2 + length - 1	; setup array as number 1
-         	mov [di], 1               	; move 1 into units position         	
-                lea si, result
-        	lea di, tmp2	; array representing number 1
-        	lea bx, result
-        	call addNumbers
+         	;lea di, tmp2 + length - 1	; setup array as number 1
+         	;mov [di], 1               	; move 1 into units position         	
+                ;lea si, result
+        	;lea di, tmp2	; array representing number 1
+        	;lea bx, result
+        	;call addNumbers
         	
         ret
 integerDivision endp
-
+           
+           
+           
 mulDiv proc	
 	
 	; Multiplication is implemented by adding the same number a bunch of times
@@ -711,7 +786,9 @@ mulDiv proc
 	
 	ret
 mulDiv endp
-
+      
+      
+      
 mulSetup proc
 
 	lea si, numberOne
@@ -727,7 +804,9 @@ mulSetup proc
    
 	ret
 mulSetup endp
-
+          
+          
+          
 lengthOfNumber proc
         
         ; this procedure counts the number of significant digits in the array (does not count leading zeros)
@@ -755,7 +834,9 @@ lengthOfNumber proc
 	ret                  
                    
 lengthOfNumber endp
-
+      
+      
+      
 arrayIsZero proc
 	; compares each digit to zero
 	; if every single one of them is zero, at the end
@@ -784,7 +865,9 @@ arrayIsZero proc
     	mov dx, 1    	    
 	ret
 arrayIsZero endp    
-      
+            
+            
+            
 subNumbersMul proc
 						
 	clc		; Clear Carry Flag (cf = 0)
@@ -827,7 +910,9 @@ subNumbersMul proc
 			       	              
 	ret	              
 subNumbersMul endp
-
+             
+             
+             
 subNumbers proc
 	; TODO write some bs about how the algorithm requires a positive result         
 	; TODO the minuend as to be greater or equal to the subtrahend explain that
@@ -904,7 +989,9 @@ subNumbers proc
 		loop subElements			       	              
 	ret	              
 subNumbers endp
-
+   
+   
+   
 addNumbers proc
 	
 	clc		; Clear Carry Flag (cf = 0)
@@ -943,7 +1030,8 @@ addNumbers proc
 	              
 	ret	              
 addNumbers endp  
-
+       
+       
 
 copyArray proc
               
@@ -962,7 +1050,9 @@ copyArray proc
 		loop doCopy		            
 	ret      
 copyArray endp
-
+            
+            
+            
 swapDigitsBetweenNumbers proc
 
 	; swap array specified by si and di register
@@ -979,7 +1069,9 @@ swapDigitsBetweenNumbers proc
 		                                         
 	ret		                                         
 swapDigitsBetweenNumbers endp
-                         
+                            
+                            
+                            
 determineSubtractionSign proc
         
         ; compare arrays in SI and DI
@@ -1026,63 +1118,12 @@ determineSubtractionSign proc
    		
 	ret
 determineSubtractionSign endp             
-              
-outputResult PROC	
-	
-	lea dx, resultPreText	; move output prefix text 
-	mov ah, 09h	; load function to print out sting in DX
-	int 21h         ; execute 09h                                                           	
-	
-	; The output procedure validates for leading zeros and if it's a leading zero, it does not print it
-	; The issue is, if no validation is preformed, for the number zero, nothing will be printed
-	; this because the the leading zero validation uses any number different to zero
-	; since zero does not contain any non-zero number, every digit of the array will be considered a leading zero and nothing will get printed
-	; To fix this issue, the print loop will not print the last digit (meaning it will not reform the leading zero on the last digit)
-	; then we will manually print the last digit (without validating for a leading zero).
-	; Like this, we assure when printing number 0 that a leading zero bug does not occour.
-	                    
-	mov cx, length 	- 1	; loop over every digit minus the least significant digit
-	lea si, result  ; point into the beggining result array	                    
-	                    
-	outputSignValidation:
-	cmp resultSign, 1	; (0 = positive number, 1 = negative number)
-	jne outputDigit
-	
-	call outputMinusChar	
-	
-	outputDigit:
-		; process each digit on each iteration
-		; validate for leading zero and print if it isn't a leading zero
-		; todo the next line is moving a value into dh. why? si shouldn't point to a dw var? I can't be bothered to check right now. Future you, do that
-	    	mov dx, [si]	; Move digit from result into dx for processing
-	    	cmp dl, 0	; Compare the digit with zero
-	    	je checkZero	; If zero, check if it can be ignored as a leading zero
-	    	
-	    	mov bx, 1	; Found a non-zero digit, enable leading zero flag
-	    	jmp printDigit	; Jump to printing the digit
-	
-	checkZero:
-	    	cmp bx, 1	; Check if the leading zero flag is enabled
-	    	jne skipDigit	; If not enabled, skip this zero
-	
-	printDigit:
-	    	add dx, 48	; Convert number into ASCII character
-	    	mov ah, 02h	; Load function to print out digit in DX
-	    	int 21h		; Execute
-	
-	skipDigit:
-	    	inc si		; Move to the next digit
-	    	loop outputDigit; Repeat for the next digit
-	
-	; manually print the last digit 
-	mov dx, [si]    	
-	add dx, 48	; Convert number into ASCII character
-	mov ah, 02h	; Load function to print out digit in DX
-	int 21h		; Execute
-        	          
-	ret          
-outputResult ENDP   
-
+               
+               
+               
+  
+           
+           
 
 zeroNumber proc
 	       
@@ -1104,169 +1145,344 @@ zeroNumber proc
 			
 	ret
 zeroNumber endp  
-
+           
+           
            
 readNumberInput PROC
 	                                                                
 	; the number will be stored in an arbitrary array
-
-	; the array is defined by the address in the SI register, should be of the address of the first index in the array	   	    	                                                        
-	     
-	mov cx, length	; max digits in the number	         		
+	; the array will be defined by the address in the SI register 
+	; should be of the address of the first element in the array	   	    	                                                        
+	
+	; set max amount of digits per number
+	mov cx, length	     
+	mov inputLoopCounter, cx	; max digits in the number	         		
+	
+	mov ax, 0000h	; reset mouse
+	int 33h
 	
 	readingDigit:
-		mov ah, 01h	; read keyboard character function, input in AL
-		int 21h
+		     
+  		mov ax, 0001h	; show mouse
+  		int 33h
 		
-		cmp al, 27	; escape key, exit program
-		je exitProgram
+		mov ax, 3	; get mouse coordinates sub-function
+		int 33h		; execute	
 		
-		cmp al, 8	; compare to backspace key, if so remove last digit inputed 
-		je is_backspace
+		cmp bx, 1
+		jne readingDigit
 		
-		cmp al, 13	; compare to enter key, if so number is complete and move on
-		je inputIsFinished 
-	        
-	        cmp al, 43	; + addition operation
-	        je set_sum_operation
-	        
-	        cmp al, 45	; - subtraction operation
-	        je set_sub_operation
-	        
-	        cmp al, 42	; * multiplication operation
-	        je set_mul_operation
-	        
-	        cmp al, 47	; / division operation
-	        je set_div_operation
-	        
-	        cmp al, 86	; V sqrt operation
-	        je set_sqrt_operation
-	        
-	        cmp al, 118	; v sqrt operation
-	        je set_sqrt_operation
-	        
-	        ; cmp al, 110	; n nif validation
-	        ; je set_nif_validation
-	        
-	        ; cmp al, 99	; c cc validation
-	        ; je set_cc_validation
-	        
-	        ; cmp al, 98	; b ean13 barcode validation
-	        ; je set_ean13_barcode_validation
-	        
-	   	cmp al, 48	; validate if ascii code is lower than {ascci code 48, decimal 0}, if so, not a valid number, ask digit again
-	   	jl not_a_number
-	   	
-	   	cmp al, 57	; validate if ascii code is higher than {ascci code 57, decimal 9}, if so, not a valid number, ask digit again
-	   	jg not_a_number
-	   	
-	   	; if reached here, input is a valid number
-	   	jmp is_a_validNumber
-	   		   
-		is_backspace:	  		          
-	   		cmp cx, length	; validate edge case if no number has been inputed yet 
-	  		je invalidBackspace     			
-      			                  
-	  		call deleteCurrentCharacter
-			pop ax	; remove the digit from the stack	  		      	  	
-	  		; loop changed to  jmp.
-	  		inc cx	; allow for another loop iteration 
-	  		 	
-	   		jmp readingDigit	   		   
-	   	
-	   	invalidBackspace:  
-	 	  	call correctInvalidBackspace
-	   		jmp readingDigit
-	   	
-	   	set_sum_operation:
-	   		cmp operation, 0
-	   		jne inputIsFinished	; operation has already been set.
+		mov tempX, cx	; backup X coordinate, input timeout overrides cx
+		mov tempY, dx	; backup y coordinate, input timeout overrides dx
+		
+		; fix mouse click eco
+		mov cx, 0003h	; around .6 seconds timeout
+		mov dx, 0h
+		
+		mov ah, 86h 
+		int 15h		; execute timeout 
+		
+		mov cx, tempX	; restore X coordindate to register
+		mov dx, tempY	; restore Y coordindate to register  
+		
+		shr cx, 3	; divide by 8 for 80x25 screen
+		shr dx, 3       ; divide by 8 for 80x25 screen
+		; --------------------------------- Validate for invalid input coordinates -------------------------------------	
+		
+		cmp cx, 5	; out-of-bounds left
+		jbe readingDigit           
+		
+		cmp cx, 74	; out-of-bounds right
+		jae readingDigit 
+		
+		cmp dx, 1	; out-of-bounds upper
+		jbe readingDigit    
+		
+		cmp dx, 24	; out-of-bounds below
+		jae readingDigit
+		
+		cmp dx, 8	; border horizontal
+		je readingDigit
+		
+		cmp dx, 12	; border horizontal
+		je readingDigit
+		
+		cmp dx, 16	; border horizontal
+		je readingDigit 
+		
+		cmp dx, 20	; border horizontal
+		je readingDigit 
+		
+		cmp cx, 18	; border vertical
+		je readingDigit  
+		
+		cmp cx, 32	; border vertical
+		je readingDigit  
+		
+		cmp cx, 46	; border vertical
+		je readingDigit  
+		
+		cmp cx, 60	; border vertical
+		je readingDigit  		
+		
+		; invalid coordinates should have been filtered out
+		; now, validate which option has been clicked
+		     
+		validateSecondRow:
+		cmp dx, 8
+		ja validateThirdRow
+			cmp cx, 18
+			ja validateSecondRowSecondColumn; if click is outside second row first column area
+			mov al, 0		; click coordinates does not match to any option 
+			jmp readingDigit
+			                             
+			validateSecondRowSecondColumn:		
+			cmp cx, 32 
+			ja validateSecondRowThirdColumn	; if click is outside second row second column area	
+			mov al, 0		; click coordinates does not match to any option 
+			jmp readingDigit
+			
+			validateSecondRowThirdColumn:
+			cmp cx, 46 
+			ja validateSecondRowForthColumn ; if click is outside second row third column area
+			mov al, 0		; click coordinates does not match to any option 
+			jmp readingDigit
+			
+			validateSecondRowForthColumn:
+			cmp cx, 60 
+			ja validateSecondRowFifthColumn	; if click is outside second row forth column area
+			jmp inputIsFinished	; '=' was pressed
+			
+			validateSecondRowFifthColumn:	
+			jmp isBackspace	; 'DEL' was pressed
+			
+					
+		validateThirdRow:
+		cmp dx, 12
+		ja validateForthRow
+			cmp cx, 18
+			ja validateThirdRowSecondColumn
+			lea bx, randomNumberSequence
+			mov al, [bx]		; number selector, first row left cell, select first index of randomNumberSequence                             
+			jmp numberIsValid
+			                             
+			validateThirdRowSecondColumn:		
+			cmp cx, 32 
+			ja validateThirdRowThirdColumn
+			lea bx, randomNumberSequence + 1
+			mov al, [bx]		; number selector, first row mid cell, select second index of randomNumberSequence                             
+			jmp numberIsValid
+			
+			validateThirdRowThirdColumn:
+			cmp cx, 46 
+			ja validateThirdRowForthColumn
+			lea bx, randomNumberSequence + 2
+			mov al, [bx]		; number selector, first row right cell, select third index of randomNumberSequence                             
+			jmp numberIsValid
+			
+			validateThirdRowForthColumn:
+			cmp cx, 60 
+			ja validateThirdRowFifthColumn
+			cmp operation, 0
+	   		jne inputIsFinished	; operation has already been set.	   
+	   		mov operation, 'e'	; set ean-13 barcode validation	   		
+	   		jmp inputIsFinished
+		
+			
+			validateThirdRowFifthColumn:
+			cmp operation, 0
+	   		jne inputIsFinished	; operation has already been set.	   
+	   		mov operation, 'n'	; set nif validation   		
+	   		jmp inputIsFinished 	                 
+		
+		                  
+		validateForthRow:
+		cmp dx, 16
+		ja validateFifthRow
+			cmp cx, 18
+			ja validateForthRowSecondColumn
+			lea bx, randomNumberSequence + 3
+			mov al, [bx]		; number selector, seocnd row left cell, select forth index of randomNumberSequence                             
+			jmp numberIsValid                             
+			                             
+			validateForthRowSecondColumn:		
+			cmp cx, 32 
+			ja validateForthRowThirdColumn                                      
+			lea bx, randomNumberSequence + 4
+			mov al, [bx]		; number selector, second row mid cell, select fifth index of randomNumberSequence                             
+			jmp numberIsValid
+			
+			validateForthRowThirdColumn:
+			cmp cx, 46 
+			ja validateForthRowForthColumn                                     
+			lea bx, randomNumberSequence + 5
+			mov al, [bx]		; number selector, second row right cell, select sixth index of randomNumberSequence                             
+			jmp numberIsValid			
+			
+			validateForthRowForthColumn:
+			cmp cx, 60 
+			ja validateForthRowFifthColumn
+			cmp operation, 0
+	   		jne inputIsFinished	; operation has already been set.	   
+	   		mov operation, 's'	; set sqrt operation
+	   		mov digitToPrint, 'ý' - 48	; print operator. proc used mainly for numbers (used with ascii 0 - 9)
+	   		call printInputDigit	
+	   		mov digitToPrint, '๛' - 48	; print operator. proc used mainly for numbers (used with ascii 0 - 9)
+	   		call printInputDigit	   		
+	   		jmp inputIsFinished
 	   		
+			validateForthRowFifthColumn:                  
+		        ;cmp operation, 0
+	   		;jne inputIsFinished	; operation has already been set.	   
+	   		;mov operation, 'e'	   		
+	   		;jmp inputIsFinished
+		        jmp readingDigit	; do not preform cc validation for now, cc required keyboard input. As of now, it doesn't work in conjunction with mouse input          
+
+		        
+		validateFifthRow: 
+		cmp dx, 20
+		ja validateSixthRow
+			cmp cx, 18
+			ja validateFifthRowSecondColumn
+			lea bx, randomNumberSequence + 6
+			mov al, [bx]		; number selector, third row left cell, select seventh index of randomNumberSequence                             
+			jmp numberIsValid			                             
+			                             
+			validateFifthRowSecondColumn:		
+			cmp cx, 32 
+			ja validateFifthRowThirdColumn
+			lea bx, randomNumberSequence + 7
+			mov al, [bx]		; number selector, third row mid cell, select eight index of randomNumberSequence                             
+			jmp numberIsValid
+			
+			validateFifthRowThirdColumn:
+			cmp cx, 46 
+			ja validateFifthRowForthColumn                                    
+			lea bx, randomNumberSequence + 8
+			mov al, [bx]		; number selector, third row right cell, select ninth index of randomNumberSequence                             
+			jmp numberIsValid
+			
+			
+			validateFifthRowForthColumn:
+			cmp cx, 60 
+			ja validateFifthRowFifthColumn
+			cmp operation, 0
+	   		jne inputIsFinished	; operation has already been set.	   	
 	   		mov operation, '+'
-	   		
+	   		mov digitToPrint, '+' - 48	; print operator. proc used mainly for numbers (used with ascii 0 - 9)
+	   		call printInputDigit		   		
 	   		jmp inputIsFinished
 	   		
-	   	set_sub_operation:
-	   		cmp operation, 0
-	   		jne inputIsFinished	; operation has already been set.
-	   		
-	   		mov operation, '-'
-	   		
+			validateFifthRowFifthColumn:
+		        cmp operation, 0
+	   		jne inputIsFinished	; operation has already been set.	   	
+	   		mov operation, '-'	               
+	   		mov digitToPrint, '-' - 48	; print operator. proc used mainly for numbers (used with ascii 0 - 9)
+	   		call printInputDigit	
 	   		jmp inputIsFinished
-	   		
-	   	set_mul_operation:
-	   		cmp operation, 0
-	   		jne inputIsFinished	; operation has already been set.
-	   		
+			
+		validateSixthRow: 
+			cmp cx, 18
+			ja validateSixthRowSecondColumn
+			lea bx, randomNumberSequence + 9
+			mov al, [bx]		; number selector, forth row left cell, select tenth (last) index of randomNumberSequence                             
+			jmp numberIsValid                             
+			                             
+			validateSixthRowSecondColumn:		
+			cmp cx, 32 
+			ja validateSixthRowThirdColumn
+			; decimal dot not yet implemented
+			jmp readingDigit
+			
+			validateSixthRowThirdColumn:
+			cmp cx, 46 
+			ja validateSixthRowForthColumn
+			; negative sign not yet implemented
+			jmp exitProgram
+			
+			validateSixthRowForthColumn:
+			cmp cx, 60 
+			ja validateSixthRowFifthColumn
+			cmp operation, 0
+	   		jne inputIsFinished	; operation has already been set.	   		
 	   		mov operation, '*'
-	   		
+	   		mov digitToPrint, '*' - 48	; print operator. proc used mainly for numbers (used with ascii 0 - 9)
+	   		call printInputDigit	
 	   		jmp inputIsFinished
 	   		
-	   	set_div_operation:
-	   		cmp operation, 0
-	   		jne inputIsFinished	; operation has already been set.
-	   		
-	   		mov operation, '/'
-	   		
+			validateSixthRowFifthColumn:
+		        cmp operation, 0
+	   		jne inputIsFinished	; operation has already been set.	   	
+	   		mov operation, '/'	   		   
+	   		mov digitToPrint, '/' - 48	; print operator. proc used mainly for numbers (used with ascii 0 - 9)
+	   		call printInputDigit	
 	   		jmp inputIsFinished
-	
-		set_sqrt_operation:
-	   		cmp operation, 0
-	   		jne inputIsFinished	; operation has already been set.
-	   		
-	   		mov operation, 'v'
-	   		
-	   		jmp inputIsFinished      	   			   		
-	   		   	
-	        not_a_number:
-			; you morom can't even put a valid input shame grow a tumor shame shame shame
-			call putABackspaceInTheConsoleAndDeleteThePreviousCharacter
-			jmp readingDigit	; since you put a wrong characer, you now get to do it again dumb f
+	   		 	        	   						
+	   	    
+		isBackspace:	  		           
+			; validate edge case if no number has been inputed yet, If so, don't delete, return to reading cycle
+	   		mov cx, length			
+	   		cmp inputLoopCounter, cx
+	  		je readingDigit     			
+      			                  
+			call deleteLastCharacter
+			
+			pop ax	; remove the digit from the stack	  		      	  	
+	  		
+	  		inc inputLoopCounter	; allow for another loop iteration 
+	  		 	
+	   		jmp readingDigit	   		   	 	   	                                   	   			   			   		   
 	        
 	        numberIsOfmaxSize:
 	 		; since the number is max size no more digits can be added to it. Only a operator
-	 		call putABackspaceInTheConsoleAndDeleteThePreviousCharacter
+			call deleteLastCharacter
 	 		jmp readingDigit
 	 		
 	 	deletePrev:
 	 		; since the number is max size no more digits can be added to it. Only a operator
-	 		call putABackspaceInTheConsoleAndDeleteThePreviousCharacter
+			call deleteLastCharacter
 	 		jmp readingDigit             
 	                    
-	        is_a_validNumber:
+	        numberIsValid:
+			; validate amount number of digits remaining	        		        	
+	        	mov cx, inputLoopCounter
+	        	cmp cx, 0	
+	        	je readingDigit	; if limit reached, don't add process input and go back to the read cycle
+	        	
+	        	
+	        	
 	        	; you're still a shameful moron
 	        	; convert from the ascii to a usable number
-	        	mov ah, 0	; ah is not used, zero out 
-	        	sub al, '0'     ; convert ascii code into decimal number
+	        	;mov ah, 0	; ah is not used, zero out 
+	        	;sub al, '0'     ; convert ascii code into decimal number
 	        	
-	        	cmp cx, 0	; limit characters to pre-defined limit
-	        	je deletePrev
-	        	
-	        	; todo validate divisor. Must not be zero.  You can use the arrayIsZero procedure after the input has been completed 
+	        	; todo validate divisor. Must not be zero.  You can use the arrayIsZero procedure after the input has been completed 	        	
 	        	
 	        	; digits will be pushed into the stack on their correct order of magnitude
 	        	; they will later on, the popped out and inserted right to left (least significative to most significative)
 	        	; doing this to avoid this routine rightShiftUntilTheUnitDigitOfTheInputIsInTheCorrespondingUnitPositionInTheNumberArray:
 	        	push ax			; push digit into stack
-	        	dec cx
+	        	dec inputLoopCounter                 
+	        	
+	        	mov digitToPrint, al
+	        	call printInputDigit
+	        	
 	   		jmp readingDigit	; ask for the next digit
 	   			   	   
-		inputIsFinished:
-		cmp cx, length		; number cannot be empty
-		je readingDigit
-	        
-	        
+		inputIsFinished:         
+		mov cx, length
+		cmp inputLoopCounter, cx	; number cannot be empty
+		je readingDigit   
 	                   
 	popIntoNumberArray:	                  
 	
 	; mov si pointer into the last index of the array
-	add si, length	; add the lenght, will excede the array by one, since arrays are zero based
-	sub si, 1	; go back one
+	add si, length - 1	; move to the end of the number
 	
 	; calculate the number of digits inserted
-	mov ax, length		; start with max amount of digits
-	sub ax, cx		; subtract number of digits left unsused (remaining value in cx is the number of iterations left when the loop to read digits was cut short)
-	mov cx, ax		; override the value of cx
+	mov ax, length			; start with max amount of digits
+	sub ax, inputLoopCounter	; subtract number of digits left unsused (remaining value in cx is the number of iterations left when the loop to read digits was cut short)
+	mov cx, ax			; set amount of iterations for the 'popIntoDigitIntoArray' procedure
 	
 	popIntoDigitIntoArray:	; pop the digits of the number into the array                     	
 		pop ax		; pop digit		
@@ -1281,6 +1497,126 @@ readNumberInput PROC
 			          
 	ret          
 readNumberInput ENDP
+  
+  
+  
+printInputDigit proc
+	
+	; outputs a digit to the input text area
+	
+	; input: ascii code of digit to print is specified in digitToPrint varaible.
+	
+	;mov ax, 0xB800		; point ax to the start of video memory (0xB800:0000)
+	;mov es, ax
+	xor di, di		; di used to iterate through video memory
+	
+	; calculte input cell offset
+	mov ax, 80			; row length
+	mov dx, inputAreaCurrentRow	; number of rows to offset
+	mul dx				; calculate row offset
+	
+	mov bx, inputAreaCurrentColumn	
+	add bx, 4                       ; left offset
+	add ax, bx			; calculate column 
+	mov dx, 2			; each cell is composed of 2 bytes (one for char and next one for attribute)
+	
+	mul dx	    			; mul by 2 
+	mov di, ax			; di used as offset in video memory	
+	mov al, digitToPrint
+	
+	add al, 48
+	
+	mov byte ptr es:[di], al	; write character
+	mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+	
+	inc inputAreaCurrentColumn
+	
+	ret
+printInputDigit endp 
+
+
+
+printOutput proc                                                          	
+	                                                                                      
+	; printOutput proc -> renders the result in the output text area
+	
+	;mov ax, 0xB800	; point ax to the start of video memory (0xB800:0000)
+	;mov es, ax
+	xor di, di	; di used to iterate through video memory
+	
+	; calculte input cell offset
+	mov ax, 80	; row length
+	mov dx, 6	; number of rows to offset
+	mul dx		; calculate row offset
+	
+	mov bx, 2	
+	add bx, 4	; left offset
+	add ax, bx	; calculate column offset
+	mov dx, 2	; each cell is composed of 2 bytes (one for char and next one for attribute)
+	mul dx		; mul by 2 (each console character is composed of 2 bytes: character + attribute)
+	
+	; offset has been calculated, now move di to the correct position
+	
+	mov di, ax	; offset di to the start cell of the output text area			                                                                                     
+	                                                                                      
+	; The output procedure validates for leading zeros and if it's a leading zero, it does not print it
+	; The issue is, if no validation is preformed, for the number zero, nothing will be printed
+	; this because the the leading zero validation uses any number different to zero
+	; since zero does not contain any non-zero number, every digit of the array will be considered a leading zero and nothing will get printed
+	; To fix this issue, the print loop will not print the last digit (meaning it will not reform the leading zero on the last digit)
+	; then we will manually print the last digit (without validating for a leading zero).
+	; Like this, we assure when printing number 0 that a leading zero bug does not occour.
+	                    
+	mov cx, length 	- 1	; loop over every digit minus the least significant digit
+	lea si, result  	; point into the beggining result array	                    
+	                    
+	outputSignValidation:
+	cmp resultSign, 1	; (0 = positive number, 1 = negative number)
+	jne outputDigit
+	
+	; negative result, output a negative sign first
+	
+	mov byte ptr es:[di], 45	; '-' minus character
+	mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+	inc di
+	
+	outputDigit:
+		; process each digit on each iteration
+		; validate for leading zero and print if it isn't a leading zero
+		; todo the next line is moving a value into dh. why? si shouldn't point to a dw var? I can't be bothered to check right now. Future you, do that
+	    	mov dx, [si]	; Move digit from result into dx for processing
+		cmp dl, 0	; Compare the digit with zero
+		je checkZero	; If zero, check if it can be ignored as a leading zero
+	    	
+		mov bx, 1	; Found a non-zero digit, enable leading zero flag
+		jmp printDigit	; Jump to printing the digit
+	
+	checkZero:
+	    	cmp bx, 1	; Check if the leading zero flag is enabled
+	    	jne skipDigit	; If not enabled, skip this zero
+	
+	printDigit:
+	    	mov al, [si]	
+		add al, 48	
+		mov byte ptr es:[di], al	; write character
+		mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+	 	add di, 2			; offset di by 2, needs also to skip the current cell attribute byte                 
+	 	
+	skipDigit:
+	    	inc si		; Move to the next digit
+	    	loop outputDigit; Repeat for the next digit
+	
+	; manually print the last digit 
+	mov dl, [si]    	
+	add dl, 48	; Convert number into ASCII character
+	
+	mov byte ptr es:[di], dl	; write character
+	mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+	add di, 2			; offset di by 2, needs also to skip the current cell attribute byte
+	
+	ret
+printOutput endp
+          
                                                    
                   
 putANewLineInTheConsole proc
@@ -1291,8 +1627,11 @@ putANewLineInTheConsole proc
 	
 	ret	
 putANewLineInTheConsole endp
-
+            
+            
+            
 putABackspaceInTheConsoleAndDeleteThePreviousCharacter proc
+	; deprecated
 	; meant to be used for data validation, when user does not press backspace key
 	lea dx, backspace_string	
 	mov ah, 09h
@@ -1301,6 +1640,38 @@ putABackspaceInTheConsoleAndDeleteThePreviousCharacter proc
 	ret	
 putABackspaceInTheConsoleAndDeleteThePreviousCharacter endp
 
+ 
+
+deleteLastCharacter proc
+	
+	dec inputAreaCurrentColumn
+	
+	;mov ax, 0xB800		; point ax to the start of video memory (0xB800:0000)
+	;mov es, ax
+	xor di, di		; di used to iterate through video memory
+	
+	; calculte input cell offset
+	mov ax, 80			; row length
+	mov dx, inputAreaCurrentRow	; number of rows to offset
+	mul dx				; calculate row offset
+	
+	mov bx, inputAreaCurrentColumn	
+	add bx, 4                       ; left offset
+	add ax, bx			; calculate column offset
+	mov dx, 2			; each cell is composed of 2 bytes (one for char and next one for attribute)
+	mul dx	    			; mul by 2 
+	mov di, ax			; di used as offset in video memory
+	
+	
+	mov byte ptr es:[di], ' '	; write character
+	mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, red foreground
+	
+	
+	
+	ret
+deleteLastCharacter endp              
+               
+               
 deleteCurrentCharacter proc
 	; meant to be used when user inserts a backspace
 	lea dx, removeCurrentCharacter
@@ -1309,8 +1680,10 @@ deleteCurrentCharacter proc
 	
 	ret	
 deleteCurrentCharacter endp 
-
-outputMinusChar proc
+               
+               
+               
+outputMinusChar proc	; deprecated
 	
 	lea dx, negativeResultString
 	mov ah, 09h
@@ -1318,6 +1691,8 @@ outputMinusChar proc
 	
 	ret	
 outputMinusChar endp  
+   
+   
         
 correctInvalidBackspace proc
 	
@@ -1327,24 +1702,533 @@ correctInvalidBackspace proc
 	
 	ret	
 correctInvalidBackspace endp   
-
-config proc	
+     
+     
+     
+config proc
 	mov ax, @data	; load data segment
 	mov ds, ax      ; load data segment
 	
-	;mov ax, stack_segment	; load stack segment
-	;mov ss, ax             ; load stack segment
-	;mov sp, 0xFFFE  ; Set stack pointer to the top of the stack
-
+	mov ax, 0xB800	; load video memory start address
+	mov es, ax	; load extra segment with video memory
 	
 	mov ax, 03h	; set video mode configuration 3
-	int 10h  
-       	mov ax, 0	; zero ax register to not messup later (idk if it even can)
-       	
+	int 10h	                                                                                                                                                                                 	
+			         
        	ret
 config endp
+         
+         
+         
+generateRandomNumberSequence proc
+        
+        mov di, 0	; keep track of how many digits have been inserted / how many are yet to insert
+        requestDigit:
+                             
+		; int 1ah / 0h
+		; returns the current time
+		; dl contains the hundredths of a second (0 - 99)
+		; get the units digit, since it's the 
+                mov ah, 0
+		int 1ah		; get current time 
+		
+		mov ah, 0	; set higher portion of ax to 0. 
+		mov al, dl	; move hundredths to ax to then mod 10
+		mov dl, 10	; reset dx para zero
+        	div dl
+        	
+        	; remainder in ah		
+        	
+        	; each number can only occur once
+        	; validate if the randomNumberSequence already contains the generated number
+        	mov cx, 10        	
+        	validateIfRandomNumberSequenceAlreadyContainsGeneratedDigit:
+        		lea si, randomNumberSequence
+        		mov bx, cx
+        		sub bx, 1		
+			add si, bx	; point si to existing number
+        	      
+			cmp [si], ah
+        	  	je requestDigit        	  	            	 	
+        	 	
+        		loop validateIfRandomNumberSequenceAlreadyContainsGeneratedDigit:
+        	
+        	; add unique digit to array
+         	addUniqueDigitToRandomNumberSequenceArray:
+        	      		
+		lea si, randomNumberSequence
+		add si, di                                    
+		mov byte ptr [si], ah
+        	inc di		; point di to the next position
+        	
+        	cmp di,10
+        	jb requestDigit
+        
+        sequenceFinished:
+        
+	ret
+generateRandomNumberSequence endp
+        
+        
+        
+renderUI proc
+	; ---------------- background ---------------------
+	
+	
+	; ---------------- Calculator UI ---------------------
+	;mov ax, 0xB800		; point ax to the start of video memory (0xB800:0000)
+	;mov es, ax
+	xor di, di		; di used to iterate through video memory
+	
+	lea si, calculatorUI	; point to the start of the string
+	
+	mov renderTableCurrentRow, 0
+	mov renderTableCurrentColumn, 4	; start on column 4 
 
-exitProgram proc	               
+	writeSymbolToVideoMemory:
+				
+		; update current row and column guide variables
+		mov ax, [renderTableCurrentRow]
+		mov bx, 80
+		mul bx            ; ax = curRow * 80
+		add ax, [renderTableCurrentColumn]  ; ax = row*80 + col
+		shl ax, 1         ; *2 for text mode offset
+		mov di, ax
+		
+		; process character						
+		mov al, [si]		; load current character 
+		cmp al, '$'		; check for end of string
+		je renderRandomNumberSequence			
+		cmp al, 13		; carriage return	ascii 10
+		je handleCarriageReturn
+		cmp al, 10		; line feed 		ascii 13
+		je handleLineFeed
+		cmp al, 185		; border, validate upper and lower range (sqrt symbol is 252, therefore need to validate upper range)
+		jb setCharacterStyle		
+		cmp al, 206
+		jbe setBorderStyle
+		
+		setCharacterStyle:						
+		mov ah, 0x40		; attribute byte defined as red background, black foreground	
+		jmp printCharacter
+		
+		setBorderStyle:                                         
+		mov ah, 0x47		; attribute byte defined as red background, light grey foreground					
+		                                 
+		printCharacter:
+		; write character & attribute directly intto video memory
+		mov byte ptr es:[di], al	; write character
+		mov byte ptr es:[di+1], ah	; write attribute 
+
+		characterPrinted:
+		add di, 2		; move into next cell in video memory
+		inc si			; move to next character in string
+		
+		; increment col
+		mov ax, [renderTableCurrentColumn]
+		inc ax
+		mov [renderTableCurrentColumn], ax
+		
+		jmp writeSymbolToVideoMemory
+  		
+  		handleLineFeed:
+		    ; lf -> go to row bellow
+		    mov ax, [renderTableCurrentRow]
+		    inc ax
+		    mov [renderTableCurrentRow], ax
+		    inc si
+		    jmp writeSymbolToVideoMemory       
+		    
+		handleCarriageReturn:
+		    ; cr -> go to benninging of the row
+		    mov word ptr [renderTableCurrentColumn], 4
+		    inc si
+		    jmp writeSymbolToVideoMemory
+
+		renderRandomNumberSequence:
+		
+		; It remains to insert the numbers in the calculator
+		; the number sequence has been generated in procedure generateRandomNumberSequence
+		; and stored into the randomNumberSequence array
+		; Each cell has a static position in the video memory		
+		; for the video mode used (10h / 03h -> 80x25), the position of each cell is:
+		; first row	left cell	80 * 10 + 7
+		; first row	mid cell	80 * 10 + 21
+		; first row	right cell	80 * 10 + 35
+		; second row	left cell	80 * 14 + 7
+		; second row	mid cell	80 * 14 + 21
+		; second row	right cell	80 * 14 + 35
+		; third row	left cell	80 * 18 + 7
+		; third row	mid cell	80 * 18 + 21
+		; third row	right cell	80 * 18 + 35
+		; fourth row	left cell	80 * 22 + 7
+		
+		; "ษออออออออออออออออออออนSmart Logic Based calculatorฬอออออออออออออออออออป",13,10,
+		; "บ                                                                     บ",13,10,
+		; "บ                                                                     บ",13,10,
+		; "บ                                                                     บ",13,10,
+		; "ฬอออออออออออออออออออออออออออออออออออออออออหอออออออออออออหอออออออออออออน",13,10,
+		; "บ                                         บ             บ             บ",13,10,
+		; "บ                                         บ      =      บ     DEL     บ",13,10,
+		; "บ                                         บ             บ             บ",13,10,
+		; "ฬอออออออออออออหอออออออออออออหอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
+		; "บ             บ             บ             บ             บ             บ",13,10,
+		; "บ 80 * 10 + 7 บ 80 * 10 + 21บ 80 * 10 + 35บ    EAN13    บ     NIF     บ",13,10,
+		; "บ             บ             บ             บ             บ             บ",13,10,
+		; "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
+		; "บ             บ             บ             บ             บ             บ",13,10,
+		; "บ 80 * 14 + 7 บ 80 * 14 + 21บ 80 * 14 + 35บ     ý๛      บ     C C     บ",13,10,
+		; "บ             บ             บ             บ             บ             บ",13,10,
+		; "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
+		; "บ             บ             บ             บ             บ             บ",13,10,
+		; "บ 80 * 18 + 7 บ 80 * 18 + 21บ 80 * 18 + 35บ      +      บ      -      บ",13,10,
+		; "บ             บ             บ             บ             บ             บ",13,10,
+		; "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
+		; "บ             บ             บ             บ             บ             บ",13,10,
+		; "บ 80 * 22 + 7 บ      .      บ     NEG     บ      *      บ      /      บ",13,10,
+		; "บ             บ             บ             บ             บ             บ",13,10,
+		; "ศอออออออออออออสอออออออออออออสอออออออออออออสอออออออออออออสอออออออออออออผ$"
+		
+		;mov ax, 0xB800		; point ax to the start of video memory (0xB800:0000)
+		;mov es, ax
+		xor di, di		; di used to iterate through video memory
+		mov cx, 0		; cx used to iterate over the randomNumberSequence array		
+	
+		   
+		   
+		; -------------------- first row left cell ------------------------ 		
+		; calculte first row left cell offset
+		mov ax, 80	; row length
+		mov dx, 10	; number of rows
+		mul dx		; calculate row offset
+		add ax, 4 + 7	; calculate column
+		mov dx, 2	; each cell is composed of 2 bytes (one for char and next one for attribute)
+		mul dx	    	; mul by 2
+		mov di, ax	; di used as offset in video memory
+		
+		; get first row left cell number (first element of randomNumberSequence)
+		lea si, randomNumberSequence
+		add si, cx 
+		inc cx
+		mov al, [si]	; copy value from array into al
+		add al, '0'	; '0' -> 48 move from ascii code 0 -> 9 to 48 > 47 (visual representatin of the number)
+		
+		; write to video memory		 
+		mov byte ptr es:[di], al	; write character
+		mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+	
+		
+		
+		; -------------------- first row mid cell ------------------------ 		
+		; calculte first row mid cell offset
+		mov ax, 80	; row length
+		mov dx, 10	; number of rows
+		mul dx		; calculate row offset
+		add ax, 4 + 21	; calculate column
+		mov dx, 2	; each cell is composed of 2 bytes (one for char and next one for attribute)
+		mul dx	    	; mul by 2 
+		mov di, ax	; di used as offset in video memory
+		
+		; get first row mid cell number (second element of randomNumberSequence)
+		lea si, randomNumberSequence
+		add si, cx 
+		inc cx
+		mov al, [si]	; copy value from array into al
+		add al, '0'	; '0' -> 48 move from ascii code 0 -> 9 to 48 > 47 (visual representatin of the number)
+		
+		; write to video memory		 
+		mov byte ptr es:[di], al	; write character
+		mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+		
+		   
+		   
+		; -------------------- first row right cell ------------------------ 		
+		; calculte first row right cell offset
+		mov ax, 80	; row length
+		mov dx, 10	; number of rows
+		mul dx		; calculate row offset
+		add ax, 4 + 35	; calculate column
+		mov dx, 2	; each cell is composed of 2 bytes (one for char and next one for attribute)
+		mul dx	    	; mul by 2 
+		mov di, ax	; di used as offset in video memory
+		
+		; get first row right cell number (third element of randomNumberSequence)
+		lea si, randomNumberSequence
+		add si, cx 
+		inc cx
+		mov al, [si]	; copy value from array into al
+		add al, '0'	; '0' -> 48 move from ascii code 0 -> 9 to 48 > 47 (visual representatin of the number)
+		
+		; write to video memory		 
+		mov byte ptr es:[di], al	; write character
+		mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+		
+		
+		
+		; -------------------- second row left cell ------------------------ 		
+		; calculte second row left cell offset
+		mov ax, 80	; row length
+		mov dx, 14	; number of rows
+		mul dx		; calculate row offset
+		add ax, 4 + 7	; calculate column
+		mov dx, 2	; each cell is composed of 2 bytes (one for char and next one for attribute)
+		mul dx	    	; mul by 2 
+		mov di, ax	; di used as offset in video memory
+		
+		; get second row left cell number (forth element of randomNumberSequence)
+		lea si, randomNumberSequence
+		add si, cx 
+		inc cx
+		mov al, [si]	; copy value from array into al
+		add al, '0'	; '0' -> 48 move from ascii code 0 -> 9 to 48 > 47 (visual representatin of the number)
+		
+		; write to video memory		 
+		mov byte ptr es:[di], al	; write character
+		mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+	
+		
+		
+		; -------------------- second row mid cell ------------------------ 		
+		; calculte second row mid cell offset
+		mov ax, 80	; row length
+		mov dx, 14	; number of rows
+		mul dx		; calculate row offset
+		add ax, 4 + 21	; calculate column
+		mov dx, 2	; each cell is composed of 2 bytes (one for char and next one for attribute)
+		mul dx	    	; mul by 2 
+		mov di, ax	; di used as offset in video memory
+		
+		; get second row mid cell number (fifth element of randomNumberSequence)
+		lea si, randomNumberSequence
+		add si, cx 
+		inc cx
+		mov al, [si]	; copy value from array into al
+		add al, '0'	; '0' -> 48 move from ascii code 0 -> 9 to 48 > 47 (visual representatin of the number)
+		
+		; write to video memory		 
+		mov byte ptr es:[di], al	; write character
+		mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+		
+		   
+		   
+		; -------------------- second row right cell ------------------------ 		
+		; calculte second row right cell offset
+		mov ax, 80	; row length
+		mov dx, 14	; number of rows
+		mul dx		; calculate row offset
+		add ax, 4 + 35	; calculate column
+		mov dx, 2	; each cell is composed of 2 bytes (one for char and next one for attribute)
+		mul dx	    	; mul by 2 
+		mov di, ax	; di used as offset in video memory
+		
+		; get second row right cell number (sixth element of randomNumberSequence)
+		lea si, randomNumberSequence
+		add si, cx 
+		inc cx
+		mov al, [si]	; copy value from array into al
+		add al, '0'	; '0' -> 48 move from ascii code 0 -> 9 to 48 > 47 (visual representatin of the number)
+		
+		; write to video memory		 
+		mov byte ptr es:[di], al	; write character
+		mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+		
+		
+		
+		; -------------------- third row left cell ------------------------ 		
+		; calculte third row left cell offset
+		mov ax, 80	; row length
+		mov dx, 18	; number of rows
+		mul dx		; calculate row offset
+		add ax, 4 + 7	; calculate column
+		mov dx, 2	; each cell is composed of 2 bytes (one for char and next one for attribute)
+		mul dx	    	; mul by 2 
+		mov di, ax	; di used as offset in video memory
+		
+		; get third row left cell number (seventh element of randomNumberSequence)
+		lea si, randomNumberSequence
+		add si, cx 
+		inc cx
+		mov al, [si]	; copy value from array into al
+		add al, '0'	; '0' -> 48 move from ascii code 0 -> 9 to 48 > 47 (visual representatin of the number)
+		
+		; write to video memory		 
+		mov byte ptr es:[di], al	; write character
+		mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+	
+		
+		
+		; -------------------- third row mid cell ------------------------ 		
+		; calculte third row mid cell offset
+		mov ax, 80	; row length
+		mov dx, 18	; number of rows
+		mul dx		; calculate row offset
+		add ax, 4 + 21	; calculate column
+		mov dx, 2	; each cell is composed of 2 bytes (one for char and next one for attribute)
+		mul dx	    	; mul by 2 
+		mov di, ax	; di used as offset in video memory
+		
+		; get third row mid cell number (eigth element of randomNumberSequence)
+		lea si, randomNumberSequence
+		add si, cx 
+		inc cx
+		mov al, [si]	; copy value from array into al
+		add al, '0'	; '0' -> 48 move from ascii code 0 -> 9 to 48 > 47 (visual representatin of the number)
+		
+		; write to video memory		 
+		mov byte ptr es:[di], al	; write character
+		mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+		
+		   
+		   
+		; -------------------- third row right cell ------------------------ 		
+		; calculte third row right cell offset
+		mov ax, 80	; row length
+		mov dx, 18	; number of rows
+		mul dx		; calculate row offset
+		add ax, 4 + 35	; calculate column
+		mov dx, 2	; each cell is composed of 2 bytes (one for char and next one for attribute)
+		mul dx	    	; mul by 2 
+		mov di, ax	; di used as offset in video memory
+		
+		; get third row right cell number (ninth element of randomNumberSequence)
+		lea si, randomNumberSequence
+		add si, cx 
+		inc cx
+		mov al, [si]	; copy value from array into al
+		add al, '0'	; '0' -> 48 move from ascii code 0 -> 9 to 48 > 47 (visual representatin of the number)
+		
+		; write to video memory		 
+		mov byte ptr es:[di], al	; write character
+		mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+		
+		
+		
+		; -------------------- forth row left cell ------------------------ 		
+		; calculte forth row left cell offset
+		mov ax, 80	; row length
+		mov dx, 22	; number of rows
+		mul dx		; calculate row offset
+		add ax, 4 + 7	; calculate column
+		mov dx, 2	; each cell is composed of 2 bytes (one for char and next one for attribute)
+		mul dx	    	; mul by 2 
+		mov di, ax	; di used as offset in video memory
+		
+		; get forth row left cell number (tenth element of randomNumberSequence)
+		lea si, randomNumberSequence
+		add si, cx 
+		inc cx
+		mov al, [si]	; copy value from array into al
+		add al, '0'	; '0' -> 48 move from ascii code 0 -> 9 to 48 > 47 (visual representatin of the number)
+		
+		; write to video memory		 
+		mov byte ptr es:[di], al	; write character
+		mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+	ret
+renderUI endp	
+
+resetInputTextArea proc
+	
+	; 69
+	 	
+	; calculte offset to start of input text area
+	mov ax, 80	; row length
+	mov dx, 1	; number of rows
+	mul dx		; calculate row offset
+	add ax, 4 + 1	; calculate column offset
+	mov dx, 2	; each cell is composed of 2 bytes (one for char and next one for attribute)
+	mul dx	    	; mul by 2 
+	mov di, ax	; di used as offset in video memory
+	
+	mov cx, 69
+	resetCellITALine1:
+		; write to video memory		 
+		mov byte ptr es:[di], ' '	; write character
+		mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+		add di, 2
+	 	loop resetCellITALine1
+	mov cx, 69	; set counter for next line
+	add di, 22	; advance di to start of next line
+	
+	resetCellITALine2:
+		; write to video memory		 
+		mov byte ptr es:[di], ' '	; write character
+		mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+		add di, 2
+	 	loop resetCellITALine2
+	mov cx, 69	; set counter for next line
+	add di, 22	; advance di to start of next line
+	
+	resetCellITALine3:
+		; write to video memory		 
+		mov byte ptr es:[di], ' '	; write character
+		mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+		add di, 2
+	 	loop resetCellITALine3	 	
+	
+	ret
+resetInputTextArea endp
+   
+       
+resetOutputTextArea proc 	
+       
+	; 41 
+        
+        ; calculte offset to start of input text area
+	mov ax, 80	; row length
+	mov dx, 5	; number of rows
+	mul dx		; calculate row offset
+	add ax, 4 + 1	; calculate column offset
+	mov dx, 2	; each cell is composed of 2 bytes (one for char and next one for attribute)
+	mul dx	    	; mul by 2 
+	mov di, ax	; di used as offset in video memory
+	
+	mov cx, 41
+	resetCellOTALine1:
+		; write to video memory		 
+		mov byte ptr es:[di], ' '	; write character
+		mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+		add di, 2
+	 	loop resetCellOTALine1
+	mov cx, 41	; set counter for next line
+	add di, 78	; advance di to start of next line
+	
+	resetCellOTALine2:
+		; write to video memory		 
+		mov byte ptr es:[di], ' '	; write character
+		mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+		add di, 2
+	 	loop resetCellOTALine2
+	mov cx, 41	; set counter for next line              
+	add di, 78	; advance di to start of next line
+	
+	resetCellOTALine3:
+		; write to video memory		 
+		mov byte ptr es:[di], ' '	; write character
+		mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
+		add di, 2
+	 	loop resetCellOTALine3	 	
+	 	
+	ret
+resetOutputTextArea endp	       
+       
+exitProgram proc
+	
+	; when exiting the aplication, DOS console does not reset the video memory, 
+	; meaning that the calculator will still be visible
+	; Because of this, we will manually reset the background to all black before exiting the application
+	
+	;mov ax, 0xB800	; point ax to the start of video memory (0xB800:0000)
+	;mov es, ax      ; 
+	xor di, di	; di = 0 (start of video memory)
+	
+	mov ah, 09h	; write character(al) and attribute(bl)
+	mov al, ' '	; character
+	mov bl, 0fh	; attribute byte (black background, white foreground)
+	mov bh, 0	; page 0
+				
+	mov cx, 4000	; number of spaces to fill (80 columns * 25 rows) * 2 (each cell of the console window is 2 bytes)
+	int 10h
+		               
 	mov ax, 4c00h   ; exit program
   	int 21h
   		               
@@ -1352,4 +2236,4 @@ exitProgram proc
 exitProgram endp	
 
 	
-END 
+END    

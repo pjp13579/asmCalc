@@ -1353,3 +1353,62 @@ exitProgram endp
 
 	
 END 
+
+
+----------------------------------
+
+outputResult PROC	
+	
+	lea dx, resultPreText	; move output prefix text 
+	mov ah, 09h	; load function to print out sting in DX
+	int 21h         ; execute 09h                                                           	
+	
+	; The output procedure validates for leading zeros and if it's a leading zero, it does not print it
+	; The issue is, if no validation is preformed, for the number zero, nothing will be printed
+	; this because the the leading zero validation uses any number different to zero
+	; since zero does not contain any non-zero number, every digit of the array will be considered a leading zero and nothing will get printed
+	; To fix this issue, the print loop will not print the last digit (meaning it will not reform the leading zero on the last digit)
+	; then we will manually print the last digit (without validating for a leading zero).
+	; Like this, we assure when printing number 0 that a leading zero bug does not occour.
+	                    
+	mov cx, length 	- 1	; loop over every digit minus the least significant digit
+	lea si, result  ; point into the beggining result array	                    
+	                    
+	outputSignValidation:
+	cmp resultSign, 1	; (0 = positive number, 1 = negative number)
+	jne outputDigit
+	
+	call outputMinusChar	
+	
+	outputDigit:
+		; process each digit on each iteration
+		; validate for leading zero and print if it isn't a leading zero
+		; todo the next line is moving a value into dh. why? si shouldn't point to a dw var? I can't be bothered to check right now. Future you, do that
+	    	mov dx, [si]	; Move digit from result into dx for processing
+	    	cmp dl, 0	; Compare the digit with zero
+	    	je checkZero	; If zero, check if it can be ignored as a leading zero
+	    	
+	    	mov bx, 1	; Found a non-zero digit, enable leading zero flag
+	    	jmp printDigit	; Jump to printing the digit
+	
+	checkZero:
+	    	cmp bx, 1	; Check if the leading zero flag is enabled
+	    	jne skipDigit	; If not enabled, skip this zero
+	
+	printDigit:
+	    	add dx, 48	; Convert number into ASCII character
+	    	mov ah, 02h	; Load function to print out digit in DX
+	    	int 21h		; Execute
+	
+	skipDigit:
+	    	inc si		; Move to the next digit
+	    	loop outputDigit; Repeat for the next digit
+	
+	; manually print the last digit 
+	mov dx, [si]    	
+	add dx, 48	; Convert number into ASCII character
+	mov ah, 02h	; Load function to print out digit in DX
+	int 21h		; Execute
+        	          
+	ret          
+outputResult ENDP 
