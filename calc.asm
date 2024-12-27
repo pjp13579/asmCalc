@@ -495,11 +495,15 @@ integerDivision proc
 	lea di, numberTwo	; input for proc arrayIsZero
 	call arrayIsZero	; result in dx             
 	cmp dx, 0		; dx: 0 -> number is zero ; dx: 1 -> number isn't zero ; 
-	mov textOutput, 1
-	lea cx, divisionByZero 
-	mov textToOutputMemoryAddress, cx
+	jne skipDivisonByZeroSetErrorMessage
+	mov textOutput, 1	; set variable used to validate if it should print the error message in output procedure
+	lea cx, divisionByZero	; load error message of division by zero 
+	mov textToOutputMemoryAddress, cx	; set error message address in appropriate variable for the output procedure
 	ret
 	
+		
+	skipDivisonByZeroSetErrorMessage:
+		
 	lea si, remainder       ; zero every digit of the remainder         	
         call zeroNumber
         mov coeficient, 0       ; zero division quotient
@@ -1449,8 +1453,8 @@ readNumberInput PROC
 	   			   	   
 		inputIsFinished:         
 		mov cx, length
-		cmp inputLoopCounter, cx	; number cannot be empty
-		je readingDigit   
+		cmp inputLoopCounter, cx	; user didn't insert a number; assume number 0 (at start of input array contains only zeros) 
+		je skipStackPop   
 	                   
 	popIntoNumberArray:	                  
 	
@@ -1467,6 +1471,8 @@ readNumberInput PROC
 		mov [si], al    ; move digit into corresponding array position
 		dec si          ; decrease array index
 	        loop popIntoDigitIntoArray	; complete iterations to pop the remainding digits of the number into the array	
+	
+	skipStackPop:
 					 			
 	mov ax, 0
 	mov dx, 0
