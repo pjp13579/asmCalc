@@ -18,7 +18,7 @@
         divisionByZero db 'Invalid: division by zero$'
            
 	; main variables	
-	length equ 8			; define constant with the length of the numbers
+	length equ 9			; define constant with the length of the numbers
 					; length should be an even number (because of square root algorithm)
 	lengthTimesTwo equ length * 2	; for the multiplication result. The maximum size of the result will be the sum of the length of both operands (operands are of the same size, and therefore time 2)		                                          
 	inputLoopCounter dw 0		; counter for remaining amount of digit to insert for a number
@@ -204,8 +204,8 @@ preformOperation proc
 	cmp operation, 's'
 	je sqrt
 	
-	; cmp operation, 'n'
-	; je nifValidator
+	cmp operation, 'n'
+	je nifValidator
 	
 	; cmp operation, 'c'
 	; je ccValidator
@@ -216,6 +216,98 @@ preformOperation proc
         ret
 preformOperation endp
      
+  
+  
+  
+nifValidator proc
+
+    mov cx, 9                ; Start multiplier at 9
+    lea si, numberTwo             ; Point to the start of numberTwo
+    mov di, 0   ; Initialize result to 0
+
+    NIFVALLoop:
+        mov al, [si]             ; Load current character from arr1
+        mov ah, 0                ; Clear high byte of ax
+    
+        mul cx                   ; Multiply digit by current multiplier
+        add di, ax  ; Add to the accumulated result
+    
+        inc si                   ; Move to the next digit
+        dec cx                   ; Decrease the multiplier
+    
+        ; Stop when cx reaches 1 (multiplier for the last digit)
+        cmp cx, 1
+        jg NIFVALLoop
+    
+        ; Compute mod 11 of the sum
+        mov ax, di  ; Load result into ax
+        mov bx, 11               ; Divisor for mod operation
+        xor dx, dx               ; Clear dx for division
+        div bx                   ; Divide ax by 11 (result in ax, remainder in dx)
+    
+        ; Compute check digit: 11 - remainder
+        mov ax, 11
+        sub ax, dx               ; ax = 11 - (result mod 11)
+    
+        ; Adjust check digit if >= 10
+        cmp ax, 10
+        jl CheckDigitDone
+        mov ax, 0                ; If result is 10 or 11, check digit is 0
+
+    CheckDigitDone:
+        ; Compare computed check digit with the last digit of NIF
+        lea si, numberTwo
+        add si, 8                ; Point to the 9th digit (last digit of NIF)
+        mov bl, [si]             ; Load last digit from arr1
+        cmp al, bl               ; Compare computed check digit with input
+        jne NIFInvalid           ; If not equal, NIF is invalid
+    
+        ; Valid NIF: Display "NIF is valid!"
+        mov textOutput, 1	; set variable used to validate if it should print the error message in output procedure
+	    lea cx, validString	; load error message of division by zero 
+	    mov textToOutputMemoryAddress, cx	; set error message address in appropriate variable for the output procedure
+        
+        ret
+
+    NIFInvalid:
+        ; Invalid NIF: Display "NIF is invalid!"
+        mov textOutput, 1	; set variable used to validate if it should print the error message in output procedure
+	    lea cx, invalidString	; load error message of division by zero 
+	    mov textToOutputMemoryAddress, cx	; set error message address in appropriate variable for the output procedure
+    
+    
+    ret
+   
+    
+    
+    
+nifValidator endp  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
      
      
 sqrt proc

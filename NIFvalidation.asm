@@ -1,4 +1,5 @@
 .model small
+
 .stack 256
 
 .data
