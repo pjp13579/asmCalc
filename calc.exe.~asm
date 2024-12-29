@@ -303,27 +303,34 @@ nifValidator endp
 
 ean13BarCodeValidator proc
 
-mov cx, 7
-mov bx, 1                ; Start multiplier at 1
-lea si, numberTwo        ; Point to the start of numberTwo
+mov bx, 1                   ; Start multiplier at 1
+lea si, numberTwo           ; Point to the start of numberTwo
 
-cmp [si], 0              ; Check if either position 0 or 1
-jne EANInvalidSize        ; of the array are initialized with
+cmp [si], 0                 ; Check if either position 0 or 1
+jne EANInvalidSize          ; of the array are initialized with
 ; anything other than 0, meaning
-inc si                   ; the EAN13 is longer than...
+inc si                      ; the EAN13 is longer than...
 ; well... 13
 cmp [si], 0
 jne EANInvalidSize
 
-mov si, 2
+inc si
+
+cmp [si], 0
+jne EANInvalidSize
+
+inc si
+
 mov di, 0   ; Initialize result to 0
+
+mov cx, 6                ;loop 6 times
 
 EANVALLoop:
 mov al, [si]             ; Load current character from arr1
 mov ah, 0                ; Clear high byte of ax
 
 mul bx                   ; Multiply digit by current multiplier
-add di, ax  ; Add to the accumulated result
+add di, ax               ; Add to the accumulated result
 
 cmp si, 14
 je endsum
@@ -336,7 +343,7 @@ mov al, [si]             ; Load current character from arr1
 mov ah, 0                ; Clear high byte of ax
 
 mul bx                   ; Multiply digit by current multiplier
-add di, ax  ; Add to the accumulated result
+add di, ax                  ; Add to the accumulated result
 
 inc si
 mov bx, 1                   ; Decrease the multiplier
@@ -357,11 +364,12 @@ div bx                   ; Divide ax by 10 (result in ax, remainder in dx)
 cmp dx, 0
 je EANValid
 
+sub bx, dx
+
 ; Compare computed check digit with the last digit of EAN
 lea si, numberTwo
-add si, 12                ; Point to the 9th digit (last digit of EAN)
-mov bl, [si]             ; Load last digit from arr1
-sub bl, '0'              ; Convert ASCII to numeric value
+add si, 15                ; Point to the 9th digit (last digit of EAN)
+mov al, [si]             ; Load last digit from arr1
 cmp al, bl               ; Compare computed check digit with input
 jne EANInvalid           ; If not equal, EAN is invalid
 
