@@ -19,8 +19,8 @@
         inputSizeWrong db 'Invalid: wrong size on input$'
            
 	; main variables	
-	length equ 15			; define constant with the length of the numbers
-					; length should be an even number (because of square root algorithm)
+	length equ 16	; define constant with the length of the numbers; LENGTH SHOULD BE AN EVEN NUMBER (because of square root algorithm)
+
 	lengthTimesTwo equ length * 2	; for the multiplication result. The maximum size of the result will be the sum of the length of both operands (operands are of the same size, and therefore time 2)		                                          
 	inputLoopCounter dw 0		; counter for remaining amount of digit to insert for a number
 	numberOne db length dup(0)	; input number 1 array
@@ -107,7 +107,7 @@
 		db "บ             บ             บ             บ             บ             บ",13,10,
 		db "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
 		db "บ             บ             บ             บ             บ             บ",13,10,
-		db "บ             บ             บ             บ     ý๛      บ     C C     บ",13,10,
+		db "บ             บ             บ             บ     ý๛      บ     NEG     บ",13,10,
 		db "บ             บ             บ             บ             บ             บ",13,10,
 		db "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
 		db "บ             บ             บ             บ             บ             บ",13,10,
@@ -206,9 +206,6 @@ preformOperation proc
 	
 	cmp operation, 'n'
 	je nifValidator
-	
-	; cmp operation, 'c'
-	; je ccValidator
 	
 	cmp operation, 'e'
 	je ean13BarCodeValidator
@@ -1103,16 +1100,16 @@ subNumbers proc
 	; Knowing both this things, we will predict when the subtraction would result in a signed negative value and react accordingly
 	; If the result is negative, we will swap the operands resulting in a signed positive and set a flag to represent the result is unsigned negative
 	
-	lea si, numberOne 	; put si in the memory address of the fist element of the numerOne array
-	lea di, numberTwo	; put di in the memory address of the fist element of the numerTwo array
+	lea si, numberTwo 	; put si in the memory address of the fist element of the numerOne array
+	lea di, numberOne	; put di in the memory address of the fist element of the numerTwo array
 	
 	call determineSubtractionSign	; signed subtraction is not suported. We will predict the sign of the result and if it's negative swap the operands
 	
-	cmp bx, 0
+	cmp bx, 1
 	je skipOperandSwap
 	
 	; to not deal with a negative result, we will swap the operands and have a flag representing a negative result 	                
-	mov resultSign, bl	; set negative number flag
+	mov resultSign, 1	; set negative number flag
 	
 	mov cx, length
 	lea si, numberOne
@@ -1289,7 +1286,7 @@ determineSubtractionSign proc
 		 		                     
    		loop compareDigitsToValidateSubtraction
    		
-   		; if reached here, subtraction results is zero
+   		; if reached here, subtraction results is zero  (numbers are equeal)
    		
    		mov bx, 0
    		
@@ -1369,7 +1366,10 @@ readNumberInput PROC
 		cmp dx, 24	; out-of-bounds below
 		jae readingDigit
 		
-		cmp dx, 9	; border horizontal
+		cmp dx, 4	; border horizontal
+		je readingDigit
+		
+		cmp dx, 8	; border horizontal
 		je readingDigit
 		
 		cmp dx, 12	; border horizontal
@@ -1397,12 +1397,13 @@ readNumberInput PROC
 		; now, validate which option has been clicked
 		
 		validateFirstRow:
-		cmp dx, 5
+		cmp dx, 4
 		ja validateSecondRow  
 		; first row has no selectable option
+		jmp readingDigit
 		
 		validateSecondRow:
-		cmp dx, 9
+		cmp dx, 8
 		ja validateThirdRow
 			cmp cx, 18
 			ja validateSecondRowSecondColumn; if click is outside second row first column area
@@ -1507,10 +1508,8 @@ readNumberInput PROC
 	   		jmp inputIsFinished
 	   		
 			validateForthRowFifthColumn:                  
-		        ;cmp operation, 0
-	   		;jne readingDigit	; operation has already been set.	   
-	   		;mov operation, 'c'	   		
-	   		;jmp inputIsFinished
+		        ; NEG
+		        ; invert number sign		        
 		        jmp readingDigit	; do not preform cc validation for now, cc required keyboard input. As of now, it doesn't work in conjunction with mouse input          
 
 		        
@@ -1750,7 +1749,7 @@ printOutput proc
 	
 	mov byte ptr es:[di], 45	; '-' minus character
 	mov byte ptr es:[di+1], 0x40	; write attribute byte defined as red background, black foreground
-	inc di
+	add di, 2
 	
 	outputDigit:
 		; process each digit on each iteration
@@ -2014,7 +2013,7 @@ renderUI proc
 		; "บ             บ             บ             บ             บ             บ"
 		; "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน"
 		; "บ             บ             บ             บ             บ             บ"
-		; "บ             บ             บ             บ     ý๛      บ     C C     บ"
+		; "บ             บ             บ             บ     ý๛      บ     NEG     บ"
 		; "บ             บ             บ             บ             บ             บ"
 		; "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน"
 		; "บ             บ             บ             บ             บ             บ"
