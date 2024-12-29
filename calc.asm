@@ -72,53 +72,52 @@
 	; when running on DOSBOX, the symbols will be rendered according to Code Page 437 standard
 	
 	; 	Corners
-	; ๏ฟฝ -> top left corner
-	; ๏ฟฝ -> top right corner
-	; ๏ฟฝ -> bottom left corner
-	; ๏ฟฝ -> bottom right corner
+	; ษ -> top left corner
+	; ป -> top right corner
+	; ศ -> bottom left corner
+	; ผ -> bottom right corner
 	
 	;	lines
-	; ๏ฟฝ -> Vertical line
-	; ๏ฟฝ -> Horizontal lines
+	; บ -> Vertical line
+	; อ -> Horizontal lines
 	
 	;	Crosspath corners
-	; ๏ฟฝ -> top, bottom, right
-	; ๏ฟฝ -> left, bottom, right
-	; ๏ฟฝ -> top, left, bottom
-	; ๏ฟฝ -> top, bottom, right, left
-	; ๏ฟฝ -> left, top, right
+	; ฬ -> top, bottom, right
+	; ห -> left, bottom, right
+	; น -> top, left, bottom
+	; ฮ -> top, bottom, right, left
+	; ส -> left, top, right
 	
 	;	Symbols                  
-	; ๏ฟฝ -> superscript 2     
-	; ๏ฟฝ -> root operator symbol	
-	; ๏ฟฝ๏ฟฝ together act as square root symbol
-	
+	; ý -> superscript 2     
+	; ๛ -> root operator symbol	
+	; ý๛ together act as square root symbol
 	calculatorUI db "",
-		db "๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอนSmart Logic Based calculator๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอป",13,10,
-		db "๏ฟฝ                                                                     ๏ฟฝ",13,10,
-		db "๏ฟฝ                                                                     ๏ฟฝ",13,10,
-		db "๏ฟฝ                                                                     ๏ฟฝ",13,10,
-		db "๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอน",13,10,
-		db "๏ฟฝ                                         ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		db "๏ฟฝ                                         ๏ฟฝ      =      ๏ฟฝ     DEL     ๏ฟฝ",13,10,
-		db "๏ฟฝ                                         ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		db "๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอน",13,10,
-		db "๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		db "๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ    EAN13    ๏ฟฝ     NIF     ๏ฟฝ",13,10,
-		db "๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		db "๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอน",13,10,
-		db "๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		db "๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ     ๏ฟฝ๏ฟฝ      ๏ฟฝ     C C     ๏ฟฝ",13,10,
-		db "๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		db "๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอน",13,10,
-		db "๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		db "๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ      +      ๏ฟฝ      -      ๏ฟฝ",13,10,
-		db "๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		db "๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอน",13,10,
-		db "๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		db "๏ฟฝ             ๏ฟฝ      .      ๏ฟฝ     END     ๏ฟฝ      *      ๏ฟฝ      /      ๏ฟฝ",13,10,
-		db "๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		db "๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอผ$"
+		db "ษออออออออออออออออออออนSmart Logic Based calculatorฬอออออออออออออออออออป",13,10,
+		db "บ                                                                     บ",13,10,
+		db "บ                                                                     บ",13,10,
+		db "บ                                                                     บ",13,10,
+		db "ฬอออออออออออออออออออออออออออออออออออออออออหอออออออออออออหอออออออออออออน",13,10,
+		db "บ                                         บ             บ             บ",13,10,
+		db "บ                                         บ      =      บ     DEL     บ",13,10,
+		db "บ                                         บ             บ             บ",13,10,
+		db "ฬอออออออออออออหอออออออออออออหอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
+		db "บ             บ             บ             บ             บ             บ",13,10,
+		db "บ             บ             บ             บ    EAN13    บ     NIF     บ",13,10,
+		db "บ             บ             บ             บ             บ             บ",13,10,
+		db "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
+		db "บ             บ             บ             บ             บ             บ",13,10,
+		db "บ             บ             บ             บ     ý๛      บ     C C     บ",13,10,
+		db "บ             บ             บ             บ             บ             บ",13,10,
+		db "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
+		db "บ             บ             บ             บ             บ             บ",13,10,
+		db "บ             บ             บ             บ      +      บ      -      บ",13,10,
+		db "บ             บ             บ             บ             บ             บ",13,10,
+		db "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
+		db "บ             บ             บ             บ             บ             บ",13,10,
+		db "บ             บ      .      บ     END     บ      *      บ      /      บ",13,10,
+		db "บ             บ             บ             บ             บ             บ",13,10,
+		db "ศอออออออออออออสอออออออออออออสอออออออออออออสอออออออออออออสอออออออออออออผ$"
 	renderTableCurrentRow dw 0	; row guide variable for table output
 	renderTableCurrentColumn dw 4	; column guide variable for table output
         
@@ -397,24 +396,6 @@ EANVALLoop:
 ean13BarCodeValidator endp  
   
   
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
      
 sqrt proc
         lea si, root       
@@ -558,11 +539,11 @@ sqrt proc
 		call muldiv	; preform multiplication				                                				                                		                                
         	
         	; 2 stop conditions for the coeficient step
-        	; Coeficient found or reached max number of iterations. Stop when any of them hits
+        	; coeficient found or reached max number of iterations. Stop when any of them hits
         	
-        	; First
-        	; Validate if the result is above to aux ( bx = 1 )
-        	; If is is below( bx = 0 ), increase the root coeficient by one and try again
+        	; first
+        	; validate if the result is above to aux ( bx = 1 )
+        	; if is is below( bx = 0 ), increase the root coeficient by one and try again
         	; until the result is above or equal to the aux
         	
         	; validate if result is above or equal to the remainder
@@ -572,9 +553,9 @@ sqrt proc
         	cmp bx, 1
         	je updateAuxAndRoot        	        	
         	
-        	; Second
-        	; Stop after 9 was processed has a possible coeficient. 
-        	; When this happens, the inc below will overflow coeficient by one. We'll fix it a couple lines below
+        	; second
+        	; stop after 9 was processed has a possible coeficient. 
+        	; when this happens, the inc below will overflow coeficient by one. We'll fix it a couple lines below
         	cmp rootCoeficient, 10
         	jae updateAuxAndRoot        	        	
         	
@@ -880,14 +861,14 @@ integerDivision endp
            
 mulDiv proc	
 	
-	; Multiplication is implemented by adding the same number a bunch of times
+	; multiplication is implemented by adding the same number a bunch of times
 	; 2 * 3, is done by adding the number 2, 3 times.
 	; 2 * 3 = ( ( ( 0 + 2 = 2 ) + 2 = 4 ) + 2 = 6 )
-	; The zero is the begining state of the result, when the additions are complete,
+	; the zero is the begining state of the result, when the additions are complete,
 	; the result variable already contains the value.
-	; The number of times the addition happens is the value of the second operand (passed in tmp3)
+	; the number of times the addition happens is the value of the second operand (passed in tmp3)
 	; on each iteration, we subtract that value by 1.
-	; We preform this while the second operand is different from zero
+	; we preform this while the second operand is different from zero
 	
 	; input
 	; mem1, address of the first element of the array representing the first operand
@@ -1150,11 +1131,11 @@ subNumbers proc
 	mov cx, length	; loop should repeat for the size of the array 
 	
 	subElements:		
-		; To deal with negative results on each iteration, we're going to avoid them alltogether.
-		; Negative results in subtraction happen when we subtract a digit by a larger one, so
+		; to deal with negative results on each iteration, we're going to avoid them alltogether.
+		; negative results in subtraction happen when we subtract a digit by a larger one, so
 		; we're going to validate if the minuend digit is below the subtrahend digit and if so 
 		; add 10 to the minuend value, set a carry flag for later and then preform the subtraction
-		; The carry flag will be subtracted to the minuend in the following iteration
+		; the carry flag will be subtracted to the minuend in the following iteration
 		
 		mov al, [si]
 		cmp al, [di]
@@ -1190,7 +1171,7 @@ subNumbers endp
    
 addNumbers proc
 	
-	clc		; Clear Carry Flag (cf = 0)
+	clc		; clear Carry Flag (cf = 0)
 	mov ax, 0	; clear ax
 	              
 	add si, length - 1		; put si in the memory address of the last element of the first array
@@ -1519,9 +1500,9 @@ readNumberInput PROC
 			cmp operation, 0
 	   		jne readingDigit	; operation has already been set.	   
 	   		mov operation, 's'	; set sqrt operation
-	   		mov digitToPrint, '๏ฟฝ' - 48	; print symbol to input area. proc used mainly for numbers (used with ascii 0 - 9)
+	   		mov digitToPrint, 'ý' - 48	; print symbol to input area. proc used mainly for numbers (used with ascii 0 - 9)
 	   		call printInputDigit	
-	   		mov digitToPrint, '๏ฟฝ' - 48	; print symbol to input area. proc used mainly for numbers (used with ascii 0 - 9)
+	   		mov digitToPrint, '๛' - 48	; print symbol to input area. proc used mainly for numbers (used with ascii 0 - 9)
 	   		call printInputDigit	   		
 	   		jmp inputIsFinished
 	   		
@@ -2019,31 +2000,31 @@ renderUI proc
 		; third row	right cell	80 * 18 + 35
 		; fourth row	left cell	80 * 22 + 7
 		
-		; "๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอนSmart Logic Based calculator๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอป",13,10,
-		; "๏ฟฝ                                                                     ๏ฟฝ",13,10,
-		; "๏ฟฝ                                                                     ๏ฟฝ",13,10,
-		; "๏ฟฝ                                                                     ๏ฟฝ",13,10,
-		; "๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอน",13,10,
-		; "๏ฟฝ                                         ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		; "๏ฟฝ                                         ๏ฟฝ      =      ๏ฟฝ     DEL     ๏ฟฝ",13,10,
-		; "๏ฟฝ                                         ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		; "๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอน",13,10,
-		; "๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		; "๏ฟฝ 80 * 10 + 7 ๏ฟฝ 80 * 10 + 21๏ฟฝ 80 * 10 + 35๏ฟฝ    EAN13    ๏ฟฝ     NIF     ๏ฟฝ",13,10,
-		; "๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		; "๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอน",13,10,
-		; "๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		; "๏ฟฝ 80 * 14 + 7 ๏ฟฝ 80 * 14 + 21๏ฟฝ 80 * 14 + 35๏ฟฝ     ๏ฟฝ๏ฟฝ      ๏ฟฝ     C C     ๏ฟฝ",13,10,
-		; "๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		; "๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอน",13,10,
-		; "๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		; "๏ฟฝ 80 * 18 + 7 ๏ฟฝ 80 * 18 + 21๏ฟฝ 80 * 18 + 35๏ฟฝ      +      ๏ฟฝ      -      ๏ฟฝ",13,10,
-		; "๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		; "๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอน",13,10,
-		; "๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		; "๏ฟฝ 80 * 22 + 7 ๏ฟฝ      .      ๏ฟฝ     END     ๏ฟฝ      *      ๏ฟฝ      /      ๏ฟฝ",13,10,
-		; "๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ             ๏ฟฝ",13,10,
-		; "๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอผ$"
+		; "ษออออออออออออออออออออนSmart Logic Based calculatorฬอออออออออออออออออออป"
+		; "บ                                                                     บ"
+		; "บ                                                                     บ"
+		; "บ                                                                     บ"
+		; "ฬอออออออออออออออออออออออออออออออออออออออออหอออออออออออออหอออออออออออออน"
+		; "บ                                         บ             บ             บ"
+		; "บ                                         บ      =      บ     DEL     บ"
+		; "บ                                         บ             บ             บ"
+		; "ฬอออออออออออออหอออออออออออออหอออออออออออออฮอออออออออออออฮอออออออออออออน"
+		; "บ             บ             บ             บ             บ             บ"
+		; "บ             บ             บ             บ    EAN13    บ     NIF     บ"
+		; "บ             บ             บ             บ             บ             บ"
+		; "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน"
+		; "บ             บ             บ             บ             บ             บ"
+		; "บ             บ             บ             บ     ý๛      บ     C C     บ"
+		; "บ             บ             บ             บ             บ             บ"
+		; "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน"
+		; "บ             บ             บ             บ             บ             บ"
+		; "บ             บ             บ             บ      +      บ      -      บ"
+		; "บ             บ             บ             บ             บ             บ"
+		; "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน"
+		; "บ             บ             บ             บ             บ             บ"
+		; "บ             บ      .      บ     END     บ      *      บ      /      บ"
+		; "บ             บ             บ             บ             บ             บ"
+		; "ศอออออออออออออสอออออออออออออสอออออออออออออสอออออออออออออสอออออออออออออผ$"
 
 		xor di, di		; di used to iterate through video memory
 		mov cx, 0		; cx used to iterate over the randomNumberSequence array		
