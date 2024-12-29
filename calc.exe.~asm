@@ -257,15 +257,16 @@ div bx                   ; Divide ax by 11 (result in ax, remainder in dx)
 mov ax, 11
 sub ax, dx               ; ax = 11 - (result mod 11)
 
-; Adjust check digit if >= 10
+; compare with control digit
 cmp ax, 10
 jl CheckDigitDone
-mov ax, 0                ; If result is 10 or 11, check digit is 0
+mov ax, 0                ; If result is 10, check digit MUST is 0
+
 
 CheckDigitDone:
 ; Compare computed check digit with the last digit of NIF
 lea si, numberTwo
-add si, 14                ; Point to the 9th digit (last digit of NIF)
+add si, 15                ; Point to the 9th digit (last digit of NIF)
 mov bl, [si]             ; Load last digit from arr1
 cmp al, bl               ; Compare computed check digit with input
 jne NIFInvalid           ; If not equal, NIF is invalid
