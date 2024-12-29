@@ -19,8 +19,8 @@ divisionByZero db 'Invalid: division by zero$'
 inputSizeWrong db 'Invalid: wrong size on input$'
 
 ; main variables
-length equ 15            ; define constant with the length of the numbers
-; length should be an even number (because of square root algorithm)
+length equ 16    ; define constant with the length of the numbers; LENGTH SHOULD BE AN EVEN NUMBER (because of square root algorithm)
+
 lengthTimesTwo equ length * 2    ; for the multiplication result. The maximum size of the result will be the sum of the length of both operands (operands are of the same size, and therefore time 2)
 inputLoopCounter dw 0        ; counter for remaining amount of digit to insert for a number
 numberOne db length dup(0)    ; input number 1 array
@@ -92,7 +92,6 @@ tmp11 db length dup(0)    ; reserved for sqrt, contains the highest tmp value th
 ; ý -> superscript 2
 ; ๛ -> root operator symbol
 ; ý๛ together act as square root symbol
-
 calculatorUI db "",
 db "ษออออออออออออออออออออนSmart Logic Based calculatorฬอออออออออออออออออออป",13,10,
 db "บ                                                                     บ",13,10,
@@ -108,7 +107,7 @@ db "บ             บ             บ             บ    EAN13    บ     NIF     บ",13,
 db "บ             บ             บ             บ             บ             บ",13,10,
 db "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
 db "บ             บ             บ             บ             บ             บ",13,10,
-db "บ             บ             บ             บ     ý๛      บ     C C     บ",13,10,
+db "บ             บ             บ             บ     ý๛      บ     NEG     บ",13,10,
 db "บ             บ             บ             บ             บ             บ",13,10,
 db "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
 db "บ             บ             บ             บ             บ             บ",13,10,
@@ -208,9 +207,6 @@ je sqrt
 cmp operation, 'n'
 je nifValidator
 
-; cmp operation, 'c'
-; je ccValidator
-
 cmp operation, 'e'
 je ean13BarCodeValidator
 
@@ -224,7 +220,7 @@ nifValidator proc
 
 mov cx, 9                ; Start multiplier at 9
 lea si, numberTwo        ; Point to the start of numberTwo
-add si, 6
+add si, 7
 
 cmp [si], 0              ; Check if the first digit of the NIF
 je NIFSizeWrong           ; is 0, which would mean the NIF is too short to be processed
@@ -323,7 +319,6 @@ mov di, 0   ; Initialize result to 0
 
 EANVALLoop:
 mov al, [si]             ; Load current character from arr1
-sub al, '0'              ; Convert ASCII to numeric value
 mov ah, 0                ; Clear high byte of ax
 
 mul bx                   ; Multiply digit by current multiplier
@@ -337,7 +332,6 @@ inc si
 mov bx, 3                   ; Decrease the multiplier
 
 mov al, [si]             ; Load current character from arr1
-sub al, '0'              ; Convert ASCII to numeric value
 mov ah, 0                ; Clear high byte of ax
 
 mul bx                   ; Multiply digit by current multiplier
@@ -395,25 +389,6 @@ mov textToOutputMemoryAddress, cx    ; set error message address in appropriate 
 ret
 
 ean13BarCodeValidator endp
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -559,11 +534,11 @@ mov mem3, si
 call muldiv    ; preform multiplication
 
 ; 2 stop conditions for the coeficient step
-; Coeficient found or reached max number of iterations. Stop when any of them hits
+; coeficient found or reached max number of iterations. Stop when any of them hits
 
-; First
-; Validate if the result is above to aux ( bx = 1 )
-; If is is below( bx = 0 ), increase the root coeficient by one and try again
+; first
+; validate if the result is above to aux ( bx = 1 )
+; if is is below( bx = 0 ), increase the root coeficient by one and try again
 ; until the result is above or equal to the aux
 
 ; validate if result is above or equal to the remainder
@@ -573,9 +548,9 @@ call determineSubtractionSign    ; result in bx
 cmp bx, 1
 je updateAuxAndRoot
 
-; Second
-; Stop after 9 was processed has a possible coeficient.
-; When this happens, the inc below will overflow coeficient by one. We'll fix it a couple lines below
+; second
+; stop after 9 was processed has a possible coeficient.
+; when this happens, the inc below will overflow coeficient by one. We'll fix it a couple lines below
 cmp rootCoeficient, 10
 jae updateAuxAndRoot
 
@@ -881,14 +856,14 @@ integerDivision endp
 
 mulDiv proc
 
-; Multiplication is implemented by adding the same number a bunch of times
+; multiplication is implemented by adding the same number a bunch of times
 ; 2 * 3, is done by adding the number 2, 3 times.
 ; 2 * 3 = ( ( ( 0 + 2 = 2 ) + 2 = 4 ) + 2 = 6 )
-; The zero is the begining state of the result, when the additions are complete,
+; the zero is the begining state of the result, when the additions are complete,
 ; the result variable already contains the value.
-; The number of times the addition happens is the value of the second operand (passed in tmp3)
+; the number of times the addition happens is the value of the second operand (passed in tmp3)
 ; on each iteration, we subtract that value by 1.
-; We preform this while the second operand is different from zero
+; we preform this while the second operand is different from zero
 
 ; input
 ; mem1, address of the first element of the array representing the first operand
@@ -1123,16 +1098,16 @@ subNumbers proc
 ; Knowing both this things, we will predict when the subtraction would result in a signed negative value and react accordingly
 ; If the result is negative, we will swap the operands resulting in a signed positive and set a flag to represent the result is unsigned negative
 
-lea si, numberOne     ; put si in the memory address of the fist element of the numerOne array
-lea di, numberTwo    ; put di in the memory address of the fist element of the numerTwo array
+lea si, numberTwo     ; put si in the memory address of the fist element of the numerOne array
+lea di, numberOne    ; put di in the memory address of the fist element of the numerTwo array
 
 call determineSubtractionSign    ; signed subtraction is not suported. We will predict the sign of the result and if it's negative swap the operands
 
-cmp bx, 0
+cmp bx, 1
 je skipOperandSwap
 
 ; to not deal with a negative result, we will swap the operands and have a flag representing a negative result
-mov resultSign, bl    ; set negative number flag
+mov resultSign, 1    ; set negative number flag
 
 mov cx, length
 lea si, numberOne
@@ -1151,11 +1126,11 @@ lea bx, result + length - 1    ; put bx in the memory address of the last elemen
 mov cx, length    ; loop should repeat for the size of the array
 
 subElements:
-; To deal with negative results on each iteration, we're going to avoid them alltogether.
-; Negative results in subtraction happen when we subtract a digit by a larger one, so
+; to deal with negative results on each iteration, we're going to avoid them alltogether.
+; negative results in subtraction happen when we subtract a digit by a larger one, so
 ; we're going to validate if the minuend digit is below the subtrahend digit and if so
 ; add 10 to the minuend value, set a carry flag for later and then preform the subtraction
-; The carry flag will be subtracted to the minuend in the following iteration
+; the carry flag will be subtracted to the minuend in the following iteration
 
 mov al, [si]
 cmp al, [di]
@@ -1191,7 +1166,7 @@ subNumbers endp
 
 addNumbers proc
 
-clc        ; Clear Carry Flag (cf = 0)
+clc        ; clear Carry Flag (cf = 0)
 mov ax, 0    ; clear ax
 
 add si, length - 1        ; put si in the memory address of the last element of the first array
@@ -1309,7 +1284,7 @@ inc di
 
 loop compareDigitsToValidateSubtraction
 
-; if reached here, subtraction results is zero
+; if reached here, subtraction results is zero  (numbers are equeal)
 
 mov bx, 0
 
@@ -1389,6 +1364,9 @@ jbe readingDigit
 cmp dx, 24    ; out-of-bounds below
 jae readingDigit
 
+cmp dx, 4    ; border horizontal
+je readingDigit
+
 cmp dx, 8    ; border horizontal
 je readingDigit
 
@@ -1416,6 +1394,12 @@ je readingDigit
 ; invalid coordinates should have been filtered out
 ; now, validate which option has been clicked
 
+validateFirstRow:
+cmp dx, 4
+ja validateSecondRow
+; first row has no selectable option
+jmp readingDigit
+
 validateSecondRow:
 cmp dx, 8
 ja validateThirdRow
@@ -1439,7 +1423,9 @@ jmp readingDigit
 validateSecondRowForthColumn:
 cmp cx, 60
 ja validateSecondRowFifthColumn    ; if click is outside second row forth column area
-jmp inputIsFinished    ; '=' was pressed
+cmp operation, 0
+jne inputIsFinished    ; operation has already been set.
+jmp readingDigit    ; no operator jas been set. Invalid. Read input again
 
 validateSecondRowFifthColumn:
 jmp isBackspace    ; 'DEL' was pressed
@@ -1472,14 +1458,14 @@ validateThirdRowForthColumn:
 cmp cx, 60
 ja validateThirdRowFifthColumn
 cmp operation, 0
-jne inputIsFinished    ; operation has already been set.
+jne readingDigit    ; operation has already been set.
 mov operation, 'e'    ; set ean-13 barcode validation
 jmp inputIsFinished
 
 
 validateThirdRowFifthColumn:
 cmp operation, 0
-jne inputIsFinished    ; operation has already been set.
+jne readingDigit    ; operation has already been set.
 mov operation, 'n'    ; set nif validation
 jmp inputIsFinished
 
@@ -1511,19 +1497,17 @@ validateForthRowForthColumn:
 cmp cx, 60
 ja validateForthRowFifthColumn
 cmp operation, 0
-jne inputIsFinished    ; operation has already been set.
+jne readingDigit    ; operation has already been set.
 mov operation, 's'    ; set sqrt operation
-mov digitToPrint, 'ý' - 48    ; print operator. proc used mainly for numbers (used with ascii 0 - 9)
+mov digitToPrint, 'ý' - 48    ; print symbol to input area. proc used mainly for numbers (used with ascii 0 - 9)
 call printInputDigit
-mov digitToPrint, '๛' - 48    ; print operator. proc used mainly for numbers (used with ascii 0 - 9)
+mov digitToPrint, '๛' - 48    ; print symbol to input area. proc used mainly for numbers (used with ascii 0 - 9)
 call printInputDigit
 jmp inputIsFinished
 
 validateForthRowFifthColumn:
-;cmp operation, 0
-;jne inputIsFinished    ; operation has already been set.
-;mov operation, 'c'
-;jmp inputIsFinished
+; NEG
+; invert number sign
 jmp readingDigit    ; do not preform cc validation for now, cc required keyboard input. As of now, it doesn't work in conjunction with mouse input
 
 
@@ -1555,7 +1539,7 @@ validateFifthRowForthColumn:
 cmp cx, 60
 ja validateFifthRowFifthColumn
 cmp operation, 0
-jne inputIsFinished    ; operation has already been set.
+jne readingDigit    ; operation has already been set.
 mov operation, '+'
 mov digitToPrint, '+' - 48    ; print operator. proc used mainly for numbers (used with ascii 0 - 9)
 call printInputDigit
@@ -1563,7 +1547,7 @@ jmp inputIsFinished
 
 validateFifthRowFifthColumn:
 cmp operation, 0
-jne inputIsFinished    ; operation has already been set.
+jne readingDigit    ; operation has already been set.
 mov operation, '-'
 mov digitToPrint, '-' - 48    ; print operator. proc used mainly for numbers (used with ascii 0 - 9)
 call printInputDigit
@@ -1592,7 +1576,7 @@ validateSixthRowForthColumn:
 cmp cx, 60
 ja validateSixthRowFifthColumn
 cmp operation, 0
-jne inputIsFinished    ; operation has already been set.
+jne readingDigit    ; operation has already been set.
 mov operation, '*'
 mov digitToPrint, '*' - 48    ; print operator. proc used mainly for numbers (used with ascii 0 - 9)
 call printInputDigit
@@ -1600,7 +1584,7 @@ jmp inputIsFinished
 
 validateSixthRowFifthColumn:
 cmp operation, 0
-jne inputIsFinished    ; operation has already been set.
+jne readingDigit    ; operation has already been set.
 mov operation, '/'
 mov digitToPrint, '/' - 48    ; print operator. proc used mainly for numbers (used with ascii 0 - 9)
 call printInputDigit
@@ -1763,7 +1747,7 @@ jne outputDigit
 
 mov byte ptr es:[di], 45    ; '-' minus character
 mov byte ptr es:[di+1], 0x40    ; write attribute byte defined as red background, black foreground
-inc di
+add di, 2
 
 outputDigit:
 ; process each digit on each iteration
@@ -2013,30 +1997,30 @@ renderRandomNumberSequence:
 ; third row    right cell    80 * 18 + 35
 ; fourth row    left cell    80 * 22 + 7
 
-; "ษออออออออออออออออออออนSmart Logic Based calculatorฬอออออออออออออออออออป",13,10,
-; "บ                                                                     บ",13,10,
-; "บ                                                                     บ",13,10,
-; "บ                                                                     บ",13,10,
-; "ฬอออออออออออออออออออออออออออออออออออออออออหอออออออออออออหอออออออออออออน",13,10,
-; "บ                                         บ             บ             บ",13,10,
-; "บ                                         บ      =      บ     DEL     บ",13,10,
-; "บ                                         บ             บ             บ",13,10,
-; "ฬอออออออออออออหอออออออออออออหอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
-; "บ             บ             บ             บ             บ             บ",13,10,
-; "บ 80 * 10 + 7 บ 80 * 10 + 21บ 80 * 10 + 35บ    EAN13    บ     NIF     บ",13,10,
-; "บ             บ             บ             บ             บ             บ",13,10,
-; "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
-; "บ             บ             บ             บ             บ             บ",13,10,
-; "บ 80 * 14 + 7 บ 80 * 14 + 21บ 80 * 14 + 35บ     ý๛      บ     C C     บ",13,10,
-; "บ             บ             บ             บ             บ             บ",13,10,
-; "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
-; "บ             บ             บ             บ             บ             บ",13,10,
-; "บ 80 * 18 + 7 บ 80 * 18 + 21บ 80 * 18 + 35บ      +      บ      -      บ",13,10,
-; "บ             บ             บ             บ             บ             บ",13,10,
-; "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน",13,10,
-; "บ             บ             บ             บ             บ             บ",13,10,
-; "บ 80 * 22 + 7 บ      .      บ     END     บ      *      บ      /      บ",13,10,
-; "บ             บ             บ             บ             บ             บ",13,10,
+; "ษออออออออออออออออออออนSmart Logic Based calculatorฬอออออออออออออออออออป"
+; "บ                                                                     บ"
+; "บ                                                                     บ"
+; "บ                                                                     บ"
+; "ฬอออออออออออออออออออออออออออออออออออออออออหอออออออออออออหอออออออออออออน"
+; "บ                                         บ             บ             บ"
+; "บ                                         บ      =      บ     DEL     บ"
+; "บ                                         บ             บ             บ"
+; "ฬอออออออออออออหอออออออออออออหอออออออออออออฮอออออออออออออฮอออออออออออออน"
+; "บ             บ             บ             บ             บ             บ"
+; "บ             บ             บ             บ    EAN13    บ     NIF     บ"
+; "บ             บ             บ             บ             บ             บ"
+; "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน"
+; "บ             บ             บ             บ             บ             บ"
+; "บ             บ             บ             บ     ý๛      บ     NEG     บ"
+; "บ             บ             บ             บ             บ             บ"
+; "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน"
+; "บ             บ             บ             บ             บ             บ"
+; "บ             บ             บ             บ      +      บ      -      บ"
+; "บ             บ             บ             บ             บ             บ"
+; "ฬอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออฮอออออออออออออน"
+; "บ             บ             บ             บ             บ             บ"
+; "บ             บ      .      บ     END     บ      *      บ      /      บ"
+; "บ             บ             บ             บ             บ             บ"
 ; "ศอออออออออออออสอออออออออออออสอออออออออออออสอออออออออออออสอออออออออออออผ$"
 
 xor di, di        ; di used to iterate through video memory

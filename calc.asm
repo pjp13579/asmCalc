@@ -220,7 +220,7 @@ nifValidator proc
 
     mov cx, 9                ; Start multiplier at 9
     lea si, numberTwo        ; Point to the start of numberTwo
-    add si, 6                                                      
+    add si, 7                                                      
     
     cmp [si], 0              ; Check if the first digit of the NIF
     je NIFSizeWrong           ; is 0, which would mean the NIF is too short to be processed
@@ -319,7 +319,6 @@ ean13BarCodeValidator proc
 
 EANVALLoop:
     mov al, [si]             ; Load current character from arr1
-    sub al, '0'              ; Convert ASCII to numeric value
     mov ah, 0                ; Clear high byte of ax
 
     mul bx                   ; Multiply digit by current multiplier
@@ -333,7 +332,6 @@ EANVALLoop:
     mov bx, 3                   ; Decrease the multiplier
     
     mov al, [si]             ; Load current character from arr1
-    sub al, '0'              ; Convert ASCII to numeric value
     mov ah, 0                ; Clear high byte of ax
 
     mul bx                   ; Multiply digit by current multiplier
