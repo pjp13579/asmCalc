@@ -16,9 +16,10 @@ textToOutputMemoryAddress dw 0    ; specify the memory address of the string to 
 validString db 'Valid$'
 invalidString db 'Invalid$'
 divisionByZero db 'Invalid: division by zero$'
+inputSizeWrong db 'Invalid: wrong size on input$'
 
 ; main variables
-length equ 9            ; define constant with the length of the numbers
+length equ 15            ; define constant with the length of the numbers
 ; length should be an even number (because of square root algorithm)
 lengthTimesTwo equ length * 2    ; for the multiplication result. The maximum size of the result will be the sum of the length of both operands (operands are of the same size, and therefore time 2)
 inputLoopCounter dw 0        ; counter for remaining amount of digit to insert for a number
@@ -210,8 +211,8 @@ je nifValidator
 ; cmp operation, 'c'
 ; je ccValidator
 
-; cmp operation, 'e'
-; je ean13BarCodeValidator
+cmp operation, 'e'
+je ean13BarCodeValidator
 
 ret
 preformOperation endp
@@ -222,8 +223,19 @@ preformOperation endp
 nifValidator proc
 
 mov cx, 9                ; Start multiplier at 9
-lea si, numberTwo             ; Point to the start of numberTwo
+lea si, numberTwo        ; Point to the start of numberTwo
+add si, 6
+
+cmp [si], 0              ; Check if the first digit of the NIF
+je NIFSizeWrong           ; is 0, which would mean the NIF is too short to be processed
+
+dec si
+cmp [si], 0              ; if diferent than 0, would mean the NIF is too big to be processed
+jne NIFSizeWrong
+
 mov di, 0   ; Initialize result to 0
+
+inc si
 
 NIFVALLoop:
 mov al, [si]             ; Load current character from arr1
@@ -257,7 +269,7 @@ mov ax, 0                ; If result is 10 or 11, check digit is 0
 CheckDigitDone:
 ; Compare computed check digit with the last digit of NIF
 lea si, numberTwo
-add si, 8                ; Point to the 9th digit (last digit of NIF)
+add si, 14                ; Point to the 9th digit (last digit of NIF)
 mov bl, [si]             ; Load last digit from arr1
 cmp al, bl               ; Compare computed check digit with input
 jne NIFInvalid           ; If not equal, NIF is invalid
@@ -275,10 +287,15 @@ mov textOutput, 1    ; set variable used to validate if it should print the erro
 lea cx, invalidString    ; load error message of division by zero
 mov textToOutputMemoryAddress, cx    ; set error message address in appropriate variable for the output procedure
 
-
 ret
 
+NIFSizeWrong:
+; Invalid NIF: Display "Wrong NIF size!"
+mov textOutput, 1    ; set variable used to validate if it should print the error message in output procedure
+lea cx, inputSizeWrong    ; load error message of division by zero
+mov textToOutputMemoryAddress, cx    ; set error message address in appropriate variable for the output procedure
 
+ret
 
 
 nifValidator endp
@@ -287,7 +304,97 @@ nifValidator endp
 
 
 
+ean13BarCodeValidator proc
 
+mov cx, 7
+mov bx, 1                ; Start multiplier at 1
+lea si, numberTwo        ; Point to the start of numberTwo
+
+cmp [si], 0              ; Check if either position 0 or 1
+jne EANInvalidSize        ; of the array are initialized with
+; anything other than 0, meaning
+inc si                   ; the EAN13 is longer than...
+; well... 13
+cmp [si], 0
+jne EANInvalidSize
+
+mov si, 2
+mov di, 0   ; Initialize result to 0
+
+EANVALLoop:
+mov al, [si]             ; Load current character from arr1
+sub al, '0'              ; Convert ASCII to numeric value
+mov ah, 0                ; Clear high byte of ax
+
+mul bx                   ; Multiply digit by current multiplier
+add di, ax  ; Add to the accumulated result
+
+cmp si, 14
+je endsum
+
+inc si
+
+mov bx, 3                   ; Decrease the multiplier
+
+mov al, [si]             ; Load current character from arr1
+sub al, '0'              ; Convert ASCII to numeric value
+mov ah, 0                ; Clear high byte of ax
+
+mul bx                   ; Multiply digit by current multiplier
+add di, ax  ; Add to the accumulated result
+
+inc si
+mov bx, 1                   ; Decrease the multiplier
+
+loop EANVALLoop
+
+
+endsum:
+
+
+; Compute mod 10 of the sum
+mov ax, di  ; Load result into ax
+mov bx, 10               ; Divisor for mod operation
+xor dx, dx               ; Clear dx for division
+div bx                   ; Divide ax by 10 (result in ax, remainder in dx)
+
+
+cmp dx, 0
+je EANValid
+
+; Compare computed check digit with the last digit of EAN
+lea si, numberTwo
+add si, 12                ; Point to the 9th digit (last digit of EAN)
+mov bl, [si]             ; Load last digit from arr1
+sub bl, '0'              ; Convert ASCII to numeric value
+cmp al, bl               ; Compare computed check digit with input
+jne EANInvalid           ; If not equal, EAN is invalid
+
+EANValid:
+; Valid EAN: Display "EAN is valid!"
+mov textOutput, 1    ; set variable used to validate if it should print the error message in output procedure
+lea cx, validString    ; load error message of division by zero
+mov textToOutputMemoryAddress, cx    ; set error message address in appropriate variable for the output procedure
+
+ret
+
+EANInvalid:
+; Invalid EAN: Display "EAN is invalid!"
+mov textOutput, 1    ; set variable used to validate if it should print the error message in output procedure
+lea cx, invalidString    ; load error message of division by zero
+mov textToOutputMemoryAddress, cx    ; set error message address in appropriate variable for the output procedure
+
+ret
+
+EANInvalidSize:
+; Invalid EAN: Display "EAN is invalid!"
+mov textOutput, 1    ; set variable used to validate if it should print the error message in output procedure
+lea cx, inputSizeWrong    ; load error message of division by zero
+mov textToOutputMemoryAddress, cx    ; set error message address in appropriate variable for the output procedure
+
+ret
+
+ean13BarCodeValidator endp
 
 
 
