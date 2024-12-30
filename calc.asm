@@ -147,10 +147,14 @@ MAIN PROC
 	       	call resetInputTextArea	; remove whatever was rendered withing the input text area	       	 	        
 	        
         	lea si, numberOne	; load address of number1 array for input procedure
+        	lea bx, numberOneSign
+        	mov mem4, bx
         	call zeroNumber		; zero every digit of the array
         	call readNumberInput	; read input of first number                                               
                     
         	lea si, numberTwo       ; load address of number2 array for input procedure     
+        	lea bx, numberTwoSign
+        	mov mem4, bx
         	call zeroNumber		; zero every digit of the array
         	call readNumberInput	; read input of second number      
         	
@@ -170,7 +174,8 @@ MAIN PROC
          	mov textOutput, 0
          	mov inputAreaCurrentColumn, 2
          	mov inputAreaCurrentRow, 2       	        
-         	
+         	mov numberOneSign, 0
+         	mov numberTwoSign, 0
         	jmp mainCycle		; repeat                                               
 	ret        
 MAIN ENDP
@@ -191,48 +196,94 @@ preformOperation proc
  	lea di, numberTwo
  	lea bx, result                             
 	
+	mov al, numberOneSign	; sign of the first operator
+	mov dl, numberTwoSign	; sign of the second operator
+	
 	cmp operation, '+'	; addition operation
 	jne validateIfOperatorIsSubtraction
-	call addNumbers
-	    
-	    
+	cmp al, dl			; validate if numbers signs are equal
+	jne addOperatorButPreformSubtractionInsteadBecauseNumbersHaveDiferentSigns	; will jump if signs are different
+	; if here, both signs are of the value type (either negative or positive)
+	cmp al, 1			; validate if signs are negative
+	jne executeAddOperatorAdd	; if signs are not negative do not flip the initial state of the sign
+	; if here, signs are both negative
+	xor resultSign, 1		; flip inital state of sign to negative		
+	executeAddOperatorAdd:
+	call addNumbers    		; addition operator and equal signs, preform addition
+	ret
+	                                              
+	addOperatorButPreformSubtractionInsteadBecauseNumbersHaveDiferentSigns:
+	cmp al, 1			; validate if the sign of the first operator 
+	jne executeAddOperatorSub	; if the first operator isn't negative (implies that the second number is negative), do not flip the original state of result sign
+	xor resultSign, 1		; flip the original result sign to negative
+	executeAddOperatorSub:
+	call subNumbers			; addition operator and different signs, preform subtraction
+	
+	ret         
+	         
 	validateIfOperatorIsSubtraction:
-	cmp operation, '-'	; subtraction operation  
-	jne validateIfOperatorIsMultiplication                 
-	call subNumbers    
+	cmp operation, '-'	; subtraction operation
+	jne validateIfOperatorIsMultiplication
+	cmp al, dl			; validate if numbers signs are equal
+	jne subOperatorButPreformAdditionInsteadBecauseNumbersHaveDiferentSigns	; will jump if signs are different
+	; if here, both signs are of the value type (either negative or positive)
+	cmp al, 1			; validate if signs are negative
+	jne executeSubOperatorSub	; if signs are not negative do not flip the initial state of the sign
+	; if here, signs are both negative
+	xor resultSign, 1		; flip inital state of sign to negative		
+	executeSubOperatorSub:
+	call subNumbers		     		; addition operator and equal signs, preform addition
+	ret
+	                                              
+	subOperatorButPreformAdditionInsteadBecauseNumbersHaveDiferentSigns:
+	cmp al, 1			; validate if the sign of the first operator 
+	jne executeSubOperatorAdd	; if the first operator isn't negative (implies that the second number is negative), do not flip the original state of result sign
+	xor resultSign, 1		; flip the original result sign to negative
+	executeSubOperatorAdd:
+	call addNumbers	
+	ret
+	
 	           
 	validateIfOperatorIsMultiplication:
 	cmp operation, '*'	; multiplication operation  
 	jne validateIfOperatorIsDivision
+	cmp al, dl
+	je executeMultiplicationOperation
+	xor resultSign, 1
+	executeMultiplicationOperation:	
 	call mulSetup       
-	
+	ret
 	   
 	validateIfOperatorIsDivision:   
 	cmp operation, '/'	; integer division operation
-	jne validateIfOperatorIsSQRT         
+	jne validateIfOperatorIsSQRT
+	cmp al, dl
+	je executeDivisionOperation
+	xor resultSign, 1
+	executeDivisionOperation:         
 	call integerDivision    
-	
+	ret
 	  
 	validateIfOperatorIsSQRT:                     	                     
 	cmp operation, 's'	; sqrt operation 
 	jne validateIfOperatorIsNIFValidation
 	call sqrt
-	           
+	ret           
 	           
 	validateIfOperatorIsNIFValidation:           
 	cmp operation, 'n'	; nif validator 
 	jne validateIfOperatorIsBarcodevalidation
 	call nifValidator
-	     
+	ret     
 	            
 	validateIfOperatorIsBarcodevalidation:            
 	cmp operation, 'e'	; barcode validator   
 	jne IfIsntBarcodeItsABugThen
-	call ean13BarCodeValidator 
-	    
-	IfIsntBarcodeItsABugThen:
-        ; result is zero back in the main procedure. Nothing should break, even is reached here (what should have happened in the first place)
-        ret	
+	call ean13BarCodeValidator                                                                                                              
+        ret	                 
+        
+        IfIsntBarcodeItsABugThen:
+        ret
 preformOperation endp
      
   
@@ -1139,8 +1190,7 @@ subNumbers proc
 	
 	; to not deal with a negative result, we will swap the operands and have a flag representing a negative result 	                
 	
-	;mov resultSign, 1	; set negative number flag
-	mov resultSign, 1	; flip number sign flag
+	xor resultSign, 1	; flip number sign flag
 	
 	mov cx, length
 	lea si, numberOne
@@ -1542,6 +1592,8 @@ readNumberInput PROC
 			validateForthRowFifthColumn:                  
 		        ; NEG
 		        ; invert number sign
+		        mov bx, mem4
+		        xor [bx], 1
 		        jmp readingDigit	; do not preform cc validation for now, cc required keyboard input. As of now, it doesn't work in conjunction with mouse input          
 
 		        
@@ -1739,9 +1791,14 @@ printInputDigit endp
 
 
 printOutput proc                                                          			
+	
+	; validate if result is zero, if it is, do not print negative sign (in case it contains a negative result, '-0' isn't a thing here, just print '0')
+	; do not use the arrayIsZero later on, cus di will be pointing to the video memory offset
+	lea di, result	
+	call arrayIsZero	
+	mov cx, dx
 	                                                                                      
 	; printOutput proc -> renders the result in the output text area
-
 	xor di, di	; di used to iterate through video memory
 	
 	; calculte input cell offset
@@ -1757,7 +1814,7 @@ printOutput proc
 	
 	; offset has been calculated, now move di to the correct position
 	
-	mov di, ax	; offset di to the start cell of the output text area			                                                                                     
+	mov di, ax	; offset di to the start cell of the output text area			                                                                                     		
 	
 	; determine which type of output we're facing: number or text
 	cmp textOutput, 1	; 0: number , 1: text
@@ -1770,6 +1827,11 @@ printOutput proc
 	; To fix this issue, the print loop will not print the last digit (meaning it will not reform the leading zero on the last digit)
 	; then we will manually print the last digit (without validating for a leading zero).
 	; Like this, we assure when printing number 0 that a leading zero bug does not occour.
+	
+	; to not print '-0', skip print of '-' prefix if result is negative and zero. CX should contain the value if the number is zero
+	; do not use the arrayIsZero here, cus di is now pointing to the video memory offset
+	cmp cx, 0
+	je outputDigit
 	                    
 	mov cx, length 	- 1	; loop over every digit minus the least significant digit
 	lea si, result  	; point into the beggining result array	                    
