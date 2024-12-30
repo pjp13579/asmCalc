@@ -247,19 +247,19 @@ preformOperation proc
 	validateIfOperatorIsMultiplication:
 	cmp operation, '*'	; multiplication operation  
 	jne validateIfOperatorIsDivision
-	cmp al, dl
-	je executeMultiplicationOperation
-	xor resultSign, 1
+	cmp al, dl		; validate if numbers signs are different
+	je executeMultiplicationOperation; if the numbers are not different (are equal) skip changing the starting result sign
+	xor resultSign, 1	; flip the starting result sign
 	executeMultiplicationOperation:	
-	call mulSetup       
+	call mulSetup		       
 	ret
 	   
 	validateIfOperatorIsDivision:   
 	cmp operation, '/'	; integer division operation
 	jne validateIfOperatorIsSQRT
-	cmp al, dl
-	je executeDivisionOperation
-	xor resultSign, 1
+	cmp al, dl		; validate if numbers signs are different
+	je executeDivisionOperation; if the numbers are not different (are equal) skip changing the starting result sign
+	xor resultSign, 1	; flip the starting result sign
 	executeDivisionOperation:         
 	call integerDivision    
 	ret
