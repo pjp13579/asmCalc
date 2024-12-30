@@ -25,9 +25,12 @@
 	inputLoopCounter dw 0		; counter for remaining amount of digit to insert for a number
 	numberOne db length dup(0)	; input number 1 array
 	numberTwo db length dup(0)	; input number 2 array
+	numberOneSign db 0  		; sign of number two (positive / negative number)
+	numberTwoSign db 0		; sign of number two (positive / negative number)
 	mem1 dw 0	; reserved to reference operand 1 array memory address
 	mem2 dw 0	; reserved to reference operand 2 array memory address
 	mem3 dw 0	; reserved to reference result array memory address
+	mem4 dw 0	; reserved to reference which variable to save the number signal
 	tempX dw 0	; used to save the input X coordinated for after the input timeout, cus input timeout overrides cx
 	tempY dw 0	; used to save the input Y coordinated for after the input timeout, cus input timeout overrides dx
 	operation db 0			; specifies the operation between the numbers (+, - , /, v (v -> sqrt, only uses one number))	
@@ -144,7 +147,7 @@ MAIN PROC
 	       	call resetInputTextArea	; remove whatever was rendered withing the input text area	       	 	        
 	        
         	lea si, numberOne	; load address of number1 array for input procedure
-        	call zeroNumber		; zero every digit of the array        
+        	call zeroNumber		; zero every digit of the array
         	call readNumberInput	; read input of first number                                               
                     
         	lea si, numberTwo       ; load address of number2 array for input procedure     
@@ -175,8 +178,7 @@ MAIN ENDP
               
               
 preformOperation proc
-
-	lea si, numberOne
+       lea si, numberOne
 	mov mem1, si		; first operand
 	
 	lea di, numberTwo
@@ -187,30 +189,50 @@ preformOperation proc
  	
  	lea si, numberOne
  	lea di, numberTwo
- 	lea bx, result
- 	                    
-	cmp operation, '+'
-	je addNumbers
+ 	lea bx, result                             
 	
-	cmp operation, '-'                    
-	je subNumbers               
+	cmp operation, '+'	; addition operation
+	jne validateIfOperatorIsSubtraction
+	call addNumbers
+	    
+	    
+	validateIfOperatorIsSubtraction:
+	cmp operation, '-'	; subtraction operation  
+	jne validateIfOperatorIsMultiplication                 
+	call subNumbers    
+	           
+	validateIfOperatorIsMultiplication:
+	cmp operation, '*'	; multiplication operation  
+	jne validateIfOperatorIsDivision
+	call mulSetup       
 	
-	cmp operation, '*'
-	je mulSetup
+	   
+	validateIfOperatorIsDivision:   
+	cmp operation, '/'	; integer division operation
+	jne validateIfOperatorIsSQRT         
+	call integerDivision    
 	
-	cmp operation, '/'
-	je integerDivision
-	
-	cmp operation, 's'
-	je sqrt
-	
-	cmp operation, 'n'
-	je nifValidator
-	
-	cmp operation, 'e'
-	je ean13BarCodeValidator
-        
-        ret
+	  
+	validateIfOperatorIsSQRT:                     	                     
+	cmp operation, 's'	; sqrt operation 
+	jne validateIfOperatorIsNIFValidation
+	call sqrt
+	           
+	           
+	validateIfOperatorIsNIFValidation:           
+	cmp operation, 'n'	; nif validator 
+	jne validateIfOperatorIsBarcodevalidation
+	call nifValidator
+	     
+	            
+	validateIfOperatorIsBarcodevalidation:            
+	cmp operation, 'e'	; barcode validator   
+	jne IfIsntBarcodeItsABugThen
+	call ean13BarCodeValidator 
+	    
+	IfIsntBarcodeItsABugThen:
+        ; result is zero back in the main procedure. Nothing should break, even is reached here (what should have happened in the first place)
+        ret	
 preformOperation endp
      
   
@@ -1116,7 +1138,9 @@ subNumbers proc
 	je skipOperandSwap
 	
 	; to not deal with a negative result, we will swap the operands and have a flag representing a negative result 	                
-	mov resultSign, 1	; set negative number flag
+	
+	;mov resultSign, 1	; set negative number flag
+	mov resultSign, 1	; flip number sign flag
 	
 	mov cx, length
 	lea si, numberOne
@@ -1505,6 +1529,7 @@ readNumberInput PROC
 			validateForthRowForthColumn:
 			cmp cx, 60 
 			ja validateForthRowFifthColumn
+			; sqrt
 			cmp operation, 0
 	   		jne readingDigit	; operation has already been set.	   
 	   		mov operation, 's'	; set sqrt operation
@@ -1516,7 +1541,7 @@ readNumberInput PROC
 	   		
 			validateForthRowFifthColumn:                  
 		        ; NEG
-		        ; invert number sign		        
+		        ; invert number sign
 		        jmp readingDigit	; do not preform cc validation for now, cc required keyboard input. As of now, it doesn't work in conjunction with mouse input          
 
 		        
@@ -1549,6 +1574,7 @@ readNumberInput PROC
 			ja validateFifthRowFifthColumn
 			cmp operation, 0
 	   		jne readingDigit	; operation has already been set.	   	
+	   		;sum
 	   		mov operation, '+'
 	   		mov digitToPrint, '+' - 48	; print operator. proc used mainly for numbers (used with ascii 0 - 9)
 	   		call printInputDigit		   		
