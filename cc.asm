@@ -194,11 +194,13 @@ readNumberInput PROC
 		is_backspace:	  		          
 	   		cmp cx, length	; validate edge case if no number has been inputed yet 
 	  		je invalidBackspace     			
+   
+   			pop ax	; remove the digit from the stack
       			                  
 	  		call deleteCurrentCharacter
-			pop ax	; remove the digit from the stack
+			
 
-	  		; inc cx	; allow for another loop iteration 
+	  		inc cx	; allow for another loop iteration 
 	  		 	
 	   		jmp readingDigit	   		   
 	   	
