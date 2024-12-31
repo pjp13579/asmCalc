@@ -405,9 +405,6 @@ EANVALLoop:
     mul bx                   ; Multiply digit by current multiplier
     add di, ax               ; Add to the accumulated result
     
-    cmp si, 14
-    je endsum 
-    
     inc si
 
     mov bx, 3                   ; Decrease the multiplier
@@ -421,10 +418,7 @@ EANVALLoop:
     inc si
     mov bx, 1                   ; Decrease the multiplier
     
-    loop EANVALLoop
-         
-         
-    endsum:     
+    loop EANVALLoop     
          
          
     ; Compute mod 10 of the sum
