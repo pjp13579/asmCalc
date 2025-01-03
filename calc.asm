@@ -1202,15 +1202,18 @@ subNumbers proc
 	
 	mov cx, length	; loop should repeat for the size of the array 
 	
-	subElements:		
+	subElements:
+		mov dx, 0		
 		; to deal with negative results on each iteration, we're going to avoid them alltogether.
 		; negative results in subtraction happen when we subtract a digit by a larger one, so
 		; we're going to validate if the minuend digit is below the subtrahend digit and if so 
 		; add 10 to the minuend value, set a carry flag for later and then preform the subtraction
 		; the carry flag will be subtracted to the minuend in the following iteration
 		
-		mov al, [si]
-		cmp al, [di]
+		mov al, [si]            
+		mov dl, [di]
+		add dl, anotherCarryFlag		
+		cmp al, dl
 		jae subDontSetCarry
 		
 		add al, 10	; minuend below subtrahend, so add the to the minuend ; this add overrides the default carry flag. bugs out the sbb operations below		
@@ -1223,6 +1226,7 @@ subNumbers proc
 	        jmp subContinue
 	        
 	        subDontSetCarry:
+	        ;sub al, anotherCarryFlag
 	        sub al, [di]			; move the subtraction result to the corresponding element of the result array
 	        sub al, anotherCarryFlag        ; subtract the carry from the previous subtraction
 	        mov anotherCarryFlag, 0		; clear carry flag for subtraction
