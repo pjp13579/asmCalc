@@ -760,7 +760,7 @@ integerDivision proc
         mov coeficient, 0       ; zero division quotient
         mov dividendPointer, 0                         		
 	
-	; determine if the remainder is greater or equal to the divisor
+	; determine if the numberTwo is greater to the numberOne
 	lea si, numberOne	                    
 	lea di, numberTwo
 	call determineSubtractionSign
