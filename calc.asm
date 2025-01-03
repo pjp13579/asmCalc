@@ -750,13 +750,23 @@ integerDivision proc
 	ret
 	
 		
+	
 	skipDivisonByZeroSetErrorMessage:
 		
 	lea si, remainder       ; zero every digit of the remainder         	
         call zeroNumber
+        lea si, quotient       ; zero every digit of the quotient         	
+        call zeroNumber
         mov coeficient, 0       ; zero division quotient
         mov dividendPointer, 0                         		
 	
+	; determine if the remainder is greater or equal to the divisor
+	lea si, numberOne	                    
+	lea di, numberTwo
+	call determineSubtractionSign
+	cmp bx, 1 ; if bx is 0, the numberOne is above or equal to the numbertwo
+	je divisionFinished
+		
 	updateRemainder:                                         
 	
 		; update remainder
