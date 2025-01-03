@@ -1,5 +1,3 @@
-; search for todo's throughout the file        
-
 ; calculator
 .MODEL SMALL  
 
@@ -759,8 +757,6 @@ integerDivision proc
         mov coeficient, 0       ; zero division quotient
         mov dividendPointer, 0                         		
 	
-	; todo validate if divisor is 0
-	
 	updateRemainder:                                         
 	
 		; update remainder
@@ -1162,10 +1158,6 @@ subNumbersMul endp
              
              
 subNumbers proc
-	; TODO write some bs about how the algorithm requires a positive result         
-	; TODO the minuend as to be greater or equal to the subtrahend explain that
-	; TODO yeah also describe the subtraction algorithm
-	
 	; How to deal with negative results.
 	; Subtraction is not a commutative operation, but there is a direct relation in the result if we swap the operands.
 	; If we swap the operands, the result is going to have the same absolute value, but the symmetric sign.
@@ -1706,8 +1698,6 @@ readNumberInput PROC
 	        	cmp cx, 0	
 	        	je readingDigit	; if limit reached, don't add process input and go back to the read cycle
 	        	
-	        	; todo validate divisor. Must not be zero.  You can use the arrayIsZero procedure after the input has been completed 	        	
-	        	
 	        	; digits will be pushed into the stack on their correct order of magnitude
 	        	; they will later on, the popped out and inserted right to left (least significative to most significative)
 	        	; doing this to avoid this routine rightShiftUntilTheUnitDigitOfTheInputIsInTheCorrespondingUnitPositionInTheNumberArray:
@@ -1846,9 +1836,7 @@ printOutput proc
 	
 	outputDigit:
 		; process each digit on each iteration
-		; validate for leading zero and print if it isn't a leading zero
-		; todo the next line is moving a value into dh. why? si shouldn't point to a dw var? I can't be bothered to check right now. Future you, do that
-	    	mov dx, [si]	; Move digit from result into dx for processing
+		; validate for leading zero and print if it isn't a leading zeromov dx, [si]	; Move digit from result into dx for processing
 		cmp dl, 0	; Compare the digit with zero
 		je checkZero	; If zero, check if it can be ignored as a leading zero
 	    	

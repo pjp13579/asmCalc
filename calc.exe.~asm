@@ -1203,6 +1203,7 @@ lea bx, result + length - 1    ; put bx in the memory address of the last elemen
 mov cx, length    ; loop should repeat for the size of the array
 
 subElements:
+mov dx, 0
 ; to deal with negative results on each iteration, we're going to avoid them alltogether.
 ; negative results in subtraction happen when we subtract a digit by a larger one, so
 ; we're going to validate if the minuend digit is below the subtrahend digit and if so
@@ -1210,7 +1211,9 @@ subElements:
 ; the carry flag will be subtracted to the minuend in the following iteration
 
 mov al, [si]
-cmp al, [di]
+mov dl, [di]
+add dl, anotherCarryFlag
+cmp al, dl
 jae subDontSetCarry
 
 add al, 10    ; minuend below subtrahend, so add the to the minuend ; this add overrides the default carry flag. bugs out the sbb operations below
@@ -1223,6 +1226,7 @@ mov [bx], al            ; move the subtraction result to the corresponding eleme
 jmp subContinue
 
 subDontSetCarry:
+;sub al, anotherCarryFlag
 sub al, [di]            ; move the subtraction result to the corresponding element of the result array
 sub al, anotherCarryFlag        ; subtract the carry from the previous subtraction
 mov anotherCarryFlag, 0        ; clear carry flag for subtraction
@@ -2458,4 +2462,4 @@ END
 
 
 
-; [SOURCE]: C:\Users\djfer\Documents\GitHub\asmCalc\calc.asm
+; [SOURCE]: Z:\home\pjp13579\Documents\IPT\arquitetura de computadores\asmCalc\calc.asm

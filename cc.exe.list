@@ -1,0 +1,379 @@
+EMU8086 GENERATED LISTING. MACHINE CODE <- SOURCE.
+ 
+cc.exe -- emu8086 assembler version: 4.05  
+ 
+[ 1/3/2025  --  2:42:47 AM ] 
+ 
+===================================================================================================
+[LINE]     LOC: MACHINE CODE                          SOURCE
+===================================================================================================
+ 
+[   1]        :                                       ; cc validator
+[   2]        :                                       .MODEL SMALL
+[   3]        :                                       
+[   4]        :                                       .stack 256
+[   5]        :                                       
+[   6]        :                                       .DATA
+[   7]        :                                       	; text data
+[   8]    0100: 43 43 3A 20 24                        	inputPromt db 'CC: $'		
+[   9]    0105: 3A 20 24                              	resultPreText db ' : $'
+[  10]    0108: 0D 0A 24                              	newline db 13, 10, '$'			; Carriage Return and Line Feed make up a newline.
+[  11]    010B: 08 20 08 24                           backspace_string db 8, ' ', 8, '$'	; meant to be used for data validation, when user does not press the backspace key
+[  12]    010F: 20 08 24                              removeCurrentCharacter db ' ', 8, '$'   ; meant to be used when user presses the backspace key
+[  13]    0112: 20 24                                 addSpace db 32, '$'			; prints a space ' '
+[  14]        :                                       
+[  15]        :                                       	; data for result output
+[  16]    0114: 43 43 20 6E 75 6D 62 65 72 20 69 73   	validOutputString db "CC number is valid $"
+                20 76 61 6C 69 64 20 24             
+[  17]    0128: 43 43 20 6E 75 6D 62 65 72 20 69 73   invalidOutputString db "CC number is invalid $"
+                20 69 6E 76 61 6C 69 64 20 24       
+[  18]        :                                       
+[  19]        :                                       	; main variables
+[  20]        :                                       	length equ 12		; define constant with the length of the numbers
+[  21]    013E: 00 00 00 00 00 00 00 00 00 00 00 00   	cc db length dup(0)	; cc array
+                                                    
+[  22]    014A: 00 00                                 	sum dw 0              	
+[  23]        :                                       
+[  24]        :                                       .CODE
+[  25]        :                                       
+[  26]    0150:                                       MAIN PROC
+[  27]        :                                       	
+[  28]    0150: E8 16 01                              	call config	; initial configurations 	
+[  29]        :                                       
+[  30]    0153:                                       mainCycle:
+[  31]    0153: BA 00 00                              		lea dx, inputPromt	; load address of number1 prompt message for input procedure
+[  32]    0156: B4 09                                 		mov ah, 09h		; load function to print out sting in DX
+[  33]    0158: CD 21                                 		int 21h			; execute 09h
+[  34]        :                                       
+[  35]    015A: BE 3E 00                              	lea si, cc       	; load address of number2 array for input procedure
+[  36]    015D: E8 61 00                              	call readNumberInput	; read input of second number
+[  37]        :                                       		                                                                                                                                		
+[  38]    0160: E8 E6 00                              		call putanewlineintheconsole    ; does what the procedure name says
+[  39]        :                                       		
+[  40]    0163: E8 08 00                              		call validateCC        	                                                                                                  	             	
+[  41]    0166: E8 46 00                              	call outputResult       ; prints the result to the console
+[  42]        :                                       	
+[  43]    0169: E8 DD 00                              	call putANewLineInTheConsole	; does what the procedure name says          	         	
+[  44]        :                                       	
+[  45]    016C: EB E5                                 	jmp mainCycle		; repeat
+[  46]        :                                       
+[  47]        :                                       MAIN ENDP
+[  48]        :                                       
+[  49]        :                                       
+[  50]    016E:                                       validateCC proc
+[  51]    016E: C7 06 4A 00 00 00                     	mov sum, 0
+[  52]        :                                       	
+[  53]        :                                       	; handle the even numbers
+[  54]    0174: BE 3E 00                              	lea si, cc
+[  55]    0177: B9 06 00                              	mov cx, 6
+[  56]    017A:                                       	handleEven:
+[  57]        :                                       	
+[  58]    017A: B8 02 00                              		mov ax, 2
+[  59]    017D: F6 24                                 		mul [si]
+[  60]        :                                       	
+[  61]    017F: 3D 0A 00                              	        cmp ax, 10
+[  62]    0182: 72 03                                 	        jb skipEvenSubtractionNumberAboveTen
+[  63]    0184: 2D 09 00                              	        sub ax, 9
+[  64]        :                                       	
+[  65]    0187:                                       	        skipEvenSubtractionNumberAboveTen:	
+[  66]    0187: 8B D8                                 	        mov bx, ax     	
+[  67]    0189: 01 1E 4A 00                           		add sum, bx
+[  68]    018D: 83 C6 02                              		add si, 2
+[  69]    0190: E2 E8                                 		loop handleEven
+[  70]        :                                       	
+[  71]        :                                       
+[  72]        :                                       	; handle the odd numbers
+[  73]    0192: BE 3F 00                              	lea si, cc + 1
+[  74]    0195: B9 06 00                              	mov cx, 6
+[  75]    0198:                                       	handleOdd:
+[  76]    0198: 8A 1C                                 		mov bl, [si]     	
+[  77]    019A: 00 1E 4A 00                           		add byte ptr sum, bl
+[  78]    019E: 83 C6 02                              		add si, 2
+[  79]    01A1: E2 F5                                 		loop handleOdd
+[  80]        :                                       
+[  81]        :                                       
+[  82]        :                                       
+[  83]        :                                       ; validate sum, mod 10
+[  84]    01A3: BA 00 00                              mov dx, 0
+[  85]    01A6: A1 4A 00                              mov ax, sum
+[  86]    01A9: BB 0A 00                              mov bx, 10
+[  87]    01AC: F7 F3                                 div bx
+[  88]        :                                       
+[  89]    01AE: C3                                    	ret
+[  90]        :                                       validateCC endp
+[  91]        :                                       
+[  92]        :                                       
+[  93]    01AF:                                       outputResult PROC	
+[  94]        :                                       
+[  95]    01AF: 83 FA 00                              	cmp dx, 0
+[  96]    01B2: 74 05                                 	je isValid	
+[  97]        :                                       	; if here, cc is not valid
+[  98]    01B4: BA 28 00                              	lea dx, invalidOutputString	; set invalid string to output
+[  99]    01B7: EB 03                                 	jmp preformOutput		; print output
+[ 100]        :                                       	
+[ 101]    01B9:                                       	isValid:
+[ 102]    01B9: BA 14 00                              	lea dx, validOutputString	; set valid string to output
+[ 103]        :                                       	
+[ 104]    01BC:                                       	preformOutput:
+[ 105]    01BC: B4 09                                 	mov ah, 09h
+[ 106]    01BE: CD 21                                 	int 21h
+[ 107]        :                                       	
+[ 108]    01C0: C3                                    	ret
+[ 109]        :                                       outputResult ENDP
+[ 110]        :                                       
+[ 111]        :                                       
+[ 112]    01C1:                                       readNumberInput PROC
+[ 113]        :                                       	
+[ 114]        :                                       	; the number will be stored in an arbitrary array
+[ 115]        :                                       
+[ 116]        :                                       	; the array is defined by the address in the SI register, should be of the address of the first index in the array	   	    	
+[ 117]        :                                       	
+[ 118]    01C1: B9 0C 00                              	mov cx, length	; max digits in the number	         		
+[ 119]        :                                       	
+[ 120]    01C4:                                       	readingDigit:
+[ 121]    01C4: B4 01                                 		mov ah, 01h	; read keyboard character function, input in AL
+[ 122]    01C6: CD 21                                 		int 21h
+[ 123]        :                                       		
+[ 124]    01C8: 3C 1B                                 		cmp al, 27	; escape key, exit program
+[ 125]    01CA: 75 03 E9 A5 00                        		je exitProgram
+[ 126]        :                                       		
+[ 127]    01CF: 3C 08                                 		cmp al, 8	; compare to backspace key, if so remove last digit inputed
+[ 128]    01D1: 74 38                                 		je is_backspace
+[ 129]        :                                       		
+[ 130]        :                                       		; no point validating for enter key. the valid cc length is only one, 12 characters long.
+[ 131]        :                                       		; Procced when 12 input chars have been inserted
+[ 132]        :                                       	   	
+[ 133]        :                                       	   	
+[ 134]        :                                       
+[ 135]        :                                       	
+[ 136]        :                                       	        ; validate input	
+[ 137]        :                                       	   	
+[ 138]        :                                       	   	; third last and second last digits are letter.
+[ 139]        :                                       	   	; when on those, skip the number validation
+[ 140]        :                                       	   	
+[ 141]    01D3: 83 F9 03                              	   	cmp cx, 3
+[ 142]    01D6: 74 11                                 	   	je validateUppercase
+[ 143]    01D8: 83 F9 02                              	   	cmp cx, 2
+[ 144]    01DB: 74 0C                                 	   	je validateUppercase
+[ 145]        :                                       	   	
+[ 146]        :                                       	   	; validate is input is a number
+[ 147]    01DD: 3C 30                                 	   	cmp al, 48		; lower bound of numbers (ascii  48 -> 57)
+[ 148]    01DF: 7C 3B                                 	   	jl invalidInput
+[ 149]        :                                       	   		   	
+[ 150]    01E1: 3C 39                                 	   	cmp al, 57		; upper bound of numbers (ascii  48 -> 57)
+[ 151]    01E3: 77 04                                 	   	ja validateUpperCase	; if outside number bounds, validate if is uppercase letter
+[ 152]        :                                       	   	; if here, it's a number
+[ 153]    01E5: 2C 30                                 	   	sub al, '0'		; convert (0 -> 9) from range (48 -> 57) to (0 -> 9)
+[ 154]    01E7: EB 42                                 	   	jmp isValidInput
+[ 155]        :                                       	
+[ 156]        :                                       	
+[ 157]        :                                       	
+[ 158]        :                                       	
+[ 159]        :                                       	   	
+[ 160]    01E9:                                       	   	validateUppercase:
+[ 161]        :                                       	   	
+[ 162]    01E9: 83 F9 03                              	   	cmp cx, 3
+[ 163]    01EC: 77 2E                                 	   	ja invalidInput
+[ 164]        :                                       	   	
+[ 165]    01EE: 83 F9 02                              	   	cmp cx, 2
+[ 166]    01F1: 72 29                                 	   	jb invalidInput
+[ 167]        :                                       	   	
+[ 168]    01F3:                                       	   	skipSecondLastDigitValidation:
+[ 169]        :                                       	   	; if reached here, the input is not a number
+[ 170]        :                                       	   	; validate if input is a uppercase letter (A -> Z)
+[ 171]    01F3: 3C 41                                 	   	cmp al, 65		; lower bound of uppercase letter (ascii  65 -> 90)	
+[ 172]    01F5: 7C 25                                 	   	jl invalidInput	
+[ 173]        :                                       	   	
+[ 174]    01F7: 3C 5A                                 	   	cmp al, 90		; upper bound of uppercase letter (ascii  65 -> 90) 	
+[ 175]    01F9: 77 04                                 	   	ja validateLowercase	; if outside uppercase bounds, validate if is lowercase letter
+[ 176]        :                                       	   	; if here, it's a uppercase letter
+[ 177]    01FB: 2C 37                                 	   	sub al, 'A' - 10	; convert (A -> Z) from range (65 -> 90) to (10 -> 35)	
+[ 178]    01FD: EB 2C                                 	   	jmp isValidInput
+[ 179]        :                                       	   	
+[ 180]        :                                       	   	
+[ 181]    01FF:                                       	   	validateLowercase:
+[ 182]        :                                       	   	; if reached here, the input is not a uppercase letter
+[ 183]        :                                       	   	; validate if input is a lowercase letter (a -> z)	   	
+[ 184]    01FF: 3C 61                                 	   	cmp al, 97		; lower bound of lowercase letter (ascii  97 -> 122)	
+[ 185]    0201: 7C 19                                 	   	jl invalidInput
+[ 186]        :                                       	   	
+[ 187]    0203: 3C 7A                                 	   	cmp al, 122		; upper bound of lowercase letter (ascii  97 -> 122) 	
+[ 188]    0205: 77 15                                 	   	ja invalidInput		; if outside lowercase bounds, input is invalid. read input again
+[ 189]        :                                       	   	; if here, it's a uppercase letter
+[ 190]    0207: 2C 57                                 	   	sub al, 'a' - 10	; convert (a -> z) from range (97 -> 122) to (10 -> 35)		        	
+[ 191]    0209: EB 20                                 	   	jmp isValidInput
+[ 192]        :                                       	   		
+[ 193]    020B:                                       		is_backspace:	  		
+[ 194]    020B: 83 F9 0C                              	   		cmp cx, length	; validate edge case if no number has been inputed yet
+[ 195]    020E: 74 07                                 	  		je invalidBackspace     			
+[ 196]        :                                       
+[ 197]    0210: 58                                    			pop ax	; remove the digit from the stack
+[ 198]        :                                       			
+[ 199]    0211: E8 45 00                              	  		call deleteCurrentCharacter
+[ 200]        :                                       			
+[ 201]        :                                       
+[ 202]    0214: 41                                    	  		inc cx	; allow for another loop iteration
+[ 203]        :                                       	  		 	
+[ 204]    0215: EB AD                                 	   		jmp readingDigit	   		
+[ 205]        :                                       	   	
+[ 206]    0217:                                       	   	invalidBackspace:
+[ 207]    0217: E8 47 00                              	 	  	call correctInvalidBackspace
+[ 208]    021A: EB A8                                 	   		jmp readingDigit
+[ 209]        :                                       	   	   	   			   		
+[ 210]        :                                       	   		   	
+[ 211]    021C:                                       	        invalidInput:
+[ 212]        :                                       			; you morom can't even put a valid input shame grow a tumor shame shame shame
+[ 213]    021C: E8 32 00                              			call putABackspaceInTheConsoleAndDeleteThePreviousCharacter
+[ 214]    021F: EB A3                                 			jmp readingDigit	; since you put a wrong characer, you now get to do it again dumb f
+[ 215]        :                                       	
+[ 216]    0221:                                       	        numberIsOfmaxSize:
+[ 217]        :                                       	 		; since the number is max size no more digits can be added to it. Only a operator
+[ 218]    0221: E8 2D 00                              	 		call putABackspaceInTheConsoleAndDeleteThePreviousCharacter
+[ 219]    0224: EB 9E                                 	 		jmp readingDigit
+[ 220]        :                                       	 		
+[ 221]    0226:                                       	 	deletePrev:
+[ 222]        :                                       	 		; since the number is max size no more digits can be added to it. Only a operator
+[ 223]    0226: E8 28 00                              	 		call putABackspaceInTheConsoleAndDeleteThePreviousCharacter
+[ 224]    0229: EB 99                                 	 		jmp readingDigit
+[ 225]        :                                       	
+[ 226]    022B:                                       	        isValidInput:
+[ 227]        :                                       	        	; you're still a shameful moron
+[ 228]        :                                       	        	; convert from the ascii to a usable number
+[ 229]    022B: B4 00                                 	        	mov ah, 0	; ah is not used, zero out                  	
+[ 230]        :                                       	        		
+[ 231]        :                                       	        	; digits will be pushed into the stack on their correct order of magnitude
+[ 232]        :                                       	        	; they will later on, the popped out and inserted right to left (least significative to most significative)
+[ 233]        :                                       	        	; doing this to avoid this routine rightShiftUntilTheUnitDigitOfTheInputIsInTheCorrespondingUnitPositionInTheNumberArray:
+[ 234]    022D: 50                                    	        	push ax			; push digit into stack
+[ 235]        :                                       
+[ 236]    022E: E2 94                                 	   		loop readingDigit	; ask for the next digit
+[ 237]        :                                       	   			   	
+[ 238]    0230:                                       		inputIsFinished:
+[ 239]        :                                       	
+[ 240]        :                                       	
+[ 241]        :                                       	
+[ 242]    0230:                                       	popIntoNumberArray:	
+[ 243]        :                                       	
+[ 244]        :                                       	; mov si pointer into the last index of the array
+[ 245]    0230: 83 C6 0B                              	add si, length - 1	; add the lenght, will excede the array by one, since arrays are zero based
+[ 246]        :                                       	
+[ 247]    0233: B9 0C 00                              	mov cx, 12		; override the value of cx	
+[ 248]    0236:                                       	popIntoDigitIntoArray:	; pop the digits of the number into the array                     	
+[ 249]    0236: 58                                    		pop ax		; pop digit		
+[ 250]    0237: 88 04                                 		mov [si], al    ; move digit into corresponding array position
+[ 251]    0239: 4E                                    		dec si          ; decrease array index
+[ 252]    023A: E2 FA                                 	        loop popIntoDigitIntoArray	; complete iterations to pop the remainding digits of the number into the array	
+[ 253]        :                                       					 			
+[ 254]    023C: B8 00 00                              	mov ax, 0
+[ 255]    023F: BA 00 00                              	mov dx, 0
+[ 256]    0242: BE 00 00                              	mov si, 0
+[ 257]    0245: BF 00 00                              	mov di, 0
+[ 258]        :                                       			
+[ 259]    0248: C3                                    	ret
+[ 260]        :                                       readNumberInput ENDP
+[ 261]        :                                       
+[ 262]        :                                       
+[ 263]    0249:                                       putANewLineInTheConsole proc
+[ 264]        :                                       	
+[ 265]    0249: BA 08 00                              	lea dx, newline	; carriage return and line feed make up a newline.
+[ 266]    024C: B4 09                                 	mov ah, 09h
+[ 267]    024E: CD 21                                 	int 21h
+[ 268]        :                                       	
+[ 269]    0250: C3                                    	ret	
+[ 270]        :                                       putANewLineInTheConsole endp
+[ 271]        :                                       
+[ 272]    0251:                                       putABackspaceInTheConsoleAndDeleteThePreviousCharacter proc
+[ 273]        :                                       	; meant to be used for data validation, when user does not press backspace key
+[ 274]    0251: BA 0B 00                              	lea dx, backspace_string	
+[ 275]    0254: B4 09                                 	mov ah, 09h
+[ 276]    0256: CD 21                                 	int 21h	
+[ 277]        :                                       	
+[ 278]    0258: C3                                    	ret	
+[ 279]        :                                       putABackspaceInTheConsoleAndDeleteThePreviousCharacter endp
+[ 280]        :                                       
+[ 281]    0259:                                       deleteCurrentCharacter proc
+[ 282]        :                                       	; meant to be used when user inserts a backspace
+[ 283]    0259: BA 0F 00                              	lea dx, removeCurrentCharacter
+[ 284]    025C: B4 09                                 	mov ah, 09h
+[ 285]    025E: CD 21                                 	int 21h	
+[ 286]        :                                       	
+[ 287]    0260: C3                                    	ret	
+[ 288]        :                                       deleteCurrentCharacter endp
+[ 289]        :                                       
+[ 290]    0261:                                       correctInvalidBackspace proc
+[ 291]        :                                       	
+[ 292]    0261: BA 12 00                              	lea dx, addSpace
+[ 293]    0264: B4 09                                 	mov ah, 09h
+[ 294]    0266: CD 21                                 	int 21h	
+[ 295]        :                                       	
+[ 296]    0268: C3                                    	ret	
+[ 297]        :                                       correctInvalidBackspace endp
+[ 298]        :                                       
+[ 299]    0269:                                       config proc	
+[ 300]    0269: B8 10 00                              	mov ax, @data	; load data segment
+[ 301]    026C: 8E D8                                 	mov ds, ax      ; load data segment
+[ 302]        :                                       	
+[ 303]    026E: B8 03 00                              	mov ax, 03h	; set video mode configuration 3
+[ 304]    0271: CD 10                                 	int 10h
+[ 305]        :                                       	
+[ 306]    0273: C3                                    	ret
+[ 307]        :                                       config endp
+[ 308]        :                                       
+[ 309]    0274:                                       exitProgram proc	
+[ 310]    0274: B8 00 4C                              	mov ax, 4c00h   ; exit program
+[ 311]    0277: CD 21                                 	int 21h
+[ 312]        :                                       		
+[ 313]    0279: C3                                    	ret	
+[ 314]        :                                       exitProgram endp	
+[ 315]        :                                       
+[ 316]        :                                       	
+[ 317]        :                                       END
+[ 318]        :                                       
+[ 319]        :                                       
+[ 320]        :                                       
+[ 321]        :                                       
+ 
+===================================================================================================
+ 
+EXE HEADER - bytes from 0000 to 01FF inclusive.
+
+0000: 4D      -   exe signature (M)
+0001: 5A      -   exe signature (Z)
+0002: 7A      -   bytes on last page (l.byte)
+0003: 00      -   bytes on last page (h.byte)
+0004: 03      -   512 byte pages in file (l.byte)
+0005: 00      -   512 byte pages in file (h.byte)
+0006: 01      -   relocations (l.byte)
+0007: 00      -   relocations (h.byte)
+0008: 20      -   paragraphs in header (l.byte)
+0009: 00      -   paragraphs in header (h.byte)
+000A: 00      -   minimum memory (l.byte)
+000B: 00      -   minimum memory (h.byte)
+000C: FF      -   maximum memory (l.byte)
+000D: FF      -   maximum memory (h.byte)
+000E: 00      -   SS - stack segment (l.byte)
+000F: 00      -   SS - stack segment (h.byte)
+0010: 00      -   SP - stack pointer (l.byte)
+0011: 01      -   SP - stack pointer (h.byte)
+0012: 39      -   check sum (l.byte)
+0013: B3      -   check sum (h.byte)
+0014: 00      -   IP - instruction pointer (l.byte)
+0015: 00      -   IP - instruction pointer (h.byte)
+0016: 15      -   CS - code segment (l.byte)
+0017: 00      -   CS - code segment (h.byte)
+0018: 1E      -   relocation table adress (l.byte)
+0019: 00      -   relocation table adress (h.byte)
+001A: 00      -   overlay number (l.byte)
+001B: 00      -   overlay number (h.byte)
+001C: 01      -   signature (l.byte)
+001D: 00      -   signature (h.byte)
+001E: 1A      -   relocation table - offset inside segment (l.byte)
+001F: 01      -   relocation table - offset inside segment (h.byte)
+0020: 15      -   relocation table - segment anchor (l.byte)
+0021: 00      -   relocation table - segment anchor (h.byte)
+0022 to 01FF  -   reserved relocation area  (00) 
+
+
+
+
+===================================================================================================

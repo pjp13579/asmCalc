@@ -1,4 +1,4 @@
-;calculator
+; cc validator
 .MODEL SMALL  
 
 .stack 256
@@ -67,7 +67,6 @@ validateCC proc
 		add sum, bx  
 		add si, 2    
 		loop handleEven
-	
 	
 
 	; handle the odd numbers

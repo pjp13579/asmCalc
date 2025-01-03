@@ -1,0 +1,50 @@
+< THE SYMBOL TABLE >  cc.exe  --  emu8086 assembler version: 4.05 
+===================================================================================================
+Name                     	Offset    	Size      	Type      	Segment   
+===================================================================================================
+STACK                    	00000     	-5        	SEGMENT   	(ITSELF)  
+DATA                     	00010     	-5        	SEGMENT   	(ITSELF)  
+INPUTPROMT               	00000     	1         	VAR       	data      
+RESULTPRETEXT            	00005     	1         	VAR       	data      
+NEWLINE                  	00008     	1         	VAR       	data      
+BACKSPACE_STRING         	0000B     	1         	VAR       	data      
+REMOVECURRENTCHARACTER   	0000F     	1         	VAR       	data      
+ADDSPACE                 	00012     	1         	VAR       	data      
+VALIDOUTPUTSTRING        	00014     	1         	VAR       	data      
+INVALIDOUTPUTSTRING      	00028     	1         	VAR       	data      
+CC                       	0003E     	1         	VAR       	data      
+SUM                      	0004A     	2         	VAR       	data      
+CODE                     	00015     	-5        	SEGMENT   	(ITSELF)  
+MAIN                     	00000     	-1        	NEAR      	code      
+MAINCYCLE                	00003     	-1        	LABEL     	code      
+VALIDATECC               	0001E     	-1        	NEAR      	code      
+HANDLEEVEN               	0002A     	-1        	LABEL     	code      
+SKIPEVENSUBTRACTIONNUMBERABOVETEN	00037     	-1        	LABEL     	code      
+HANDLEODD                	00048     	-1        	LABEL     	code      
+OUTPUTRESULT             	0005F     	-1        	NEAR      	code      
+ISVALID                  	00069     	-1        	LABEL     	code      
+PREFORMOUTPUT            	0006C     	-1        	LABEL     	code      
+READNUMBERINPUT          	00071     	-1        	NEAR      	code      
+READINGDIGIT             	00074     	-1        	LABEL     	code      
+VALIDATEUPPERCASE        	00099     	-1        	LABEL     	code      
+SKIPSECONDLASTDIGITVALIDATION	000A3     	-1        	LABEL     	code      
+VALIDATELOWERCASE        	000AF     	-1        	LABEL     	code      
+IS_BACKSPACE             	000BB     	-1        	LABEL     	code      
+INVALIDBACKSPACE         	000C7     	-1        	LABEL     	code      
+INVALIDINPUT             	000CC     	-1        	LABEL     	code      
+NUMBERISOFMAXSIZE        	000D1     	-1        	LABEL     	code      
+DELETEPREV               	000D6     	-1        	LABEL     	code      
+ISVALIDINPUT             	000DB     	-1        	LABEL     	code      
+INPUTISFINISHED          	000E0     	-1        	LABEL     	code      
+POPINTONUMBERARRAY       	000E0     	-1        	LABEL     	code      
+POPINTODIGITINTOARRAY    	000E6     	-1        	LABEL     	code      
+PUTANEWLINEINTHECONSOLE  	000F9     	-1        	NEAR      	code      
+PUTABACKSPACEINTHECONSOLEANDDELETETHEPREVIOUSCHARACTER	00101     	-1        	NEAR      	code      
+DELETECURRENTCHARACTER   	00109     	-1        	NEAR      	code      
+CORRECTINVALIDBACKSPACE  	00111     	-1        	NEAR      	code      
+CONFIG                   	00119     	-1        	NEAR      	code      
+EXITPROGRAM              	00124     	-1        	NEAR      	code      
+===================================================================================================
+[ 1/3/2025  --  2:42:47 AM ] 
+< END >
+ 
