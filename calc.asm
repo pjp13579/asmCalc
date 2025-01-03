@@ -2109,7 +2109,7 @@ renderUI proc
 		xor di, di		; di used to iterate through video memory
 		mov cx, 0		; cx used to iterate over the randomNumberSequence array		
 	
-		   
+		; manually print the random number sequence   
 		   
 		; -------------------- first row left cell ------------------------ 		
 		; calculte first row left cell offset
